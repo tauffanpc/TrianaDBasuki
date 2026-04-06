@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", serif;
+}
+
+:root {
+  --primary-color: #ec4899;
+  --secondary-color: #fb7185;
+  --accent-color: #fdf2f8;
+  --bg-gradient: linear-gradient(to bottom right, #fff1f2, #fffafa);
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-white/60 backdrop-blur-md border border-white/40 shadow-[0_8px_32px_0_rgba(255,182,193,0.15)];
+    transform: translateZ(0);
+    will-change: transform, opacity;
+  }
+  
+  .text-romantic-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+  }
+
+  .bg-romantic-gradient {
+    background-image: linear-gradient(to bottom right, var(--primary-color), var(--secondary-color));
+  }
+
+  .optimize-gpu {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .heart-pulse {
+    animation: heart-pulse 2.5s infinite ease-in-out;
+  }
+
+  @keyframes heart-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+}

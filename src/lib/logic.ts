@@ -42,7 +42,6 @@ export async function getDailyMessage(date: Date) {
 
 export async function getGreeting() {
   const supabase = getSupabase();
-  // Try to find a daily greeting first
   const { data: dailyGreeting } = await supabase
     .from('greetings')
     .select('*')
@@ -54,7 +53,6 @@ export async function getGreeting() {
     return dailyGreeting[0] as Greeting;
   }
 
-  // Fallback to random greeting
   const { data: randomGreetings } = await supabase
     .from('greetings')
     .select('*')
@@ -95,7 +93,6 @@ export async function getDailyBackground(date: Date) {
     .eq('is_active', true);
 
   if (backgrounds && backgrounds.length > 0) {
-    // Gunakan modulo tanggal untuk memilih background agar konsisten seharian
     const index = date.getDate() % backgrounds.length;
     return backgrounds[index] as { url: string };
   }
@@ -103,9 +100,13 @@ export async function getDailyBackground(date: Date) {
 }
 
 export function getDayCounter(firstVisitDate: string) {
+  // Bandingkan hanya tanggal kalender (tanpa jam/menit/detik)
+  // Hari pertama kunjungan = Day 1, besoknya = Day 2, dst.
   const start = new Date(firstVisitDate);
+  const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
   const now = new Date();
-  const diffTime = Math.abs(now.getTime() - start.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffTime = today.getTime() - startDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays + 1;
 }

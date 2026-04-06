@@ -6,7 +6,7 @@ import { cn } from '../lib/utils';
 import { AnimatePresence } from 'motion/react';
 import { getSupabase } from '../lib/supabase';
 import { Theme } from '../types';
-import { DEFAULT_THEMES } from '../constants';
+import { DEFAULT_THEMES, getDefaultThemeForToday } from '../constants';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -59,65 +59,21 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
   const navigate = useNavigate();
   const isAdmin = location.pathname.startsWith('/admin');
   const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
-  const [currentTheme, setCurrentTheme] = React.useState<Partial<Theme>>(DEFAULT_THEMES[0]);
+  const [currentTheme, setCurrentTheme] = React.useState<Partial<Theme>>(getDefaultThemeForToday());
 
   React.useEffect(() => {
-    const fetchTheme = async () => {
-      try {
-        const supabase = getSupabase();
-        const { data: themes, error } = await supabase
-          .from('themes')
-          .select('*')
-          .eq('is_active', true);
-
-        if (error) {
-          if (error.code === 'PGRST205') {
-            console.warn('Themes table not found, using defaults.');
-            applyTheme(DEFAULT_THEMES[0]);
-            return;
-          }
-          throw error;
-        }
-
-        const activeThemes = themes && themes.length > 0 ? themes : DEFAULT_THEMES;
-        const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        const dayOfMonth = now.getDate();
-
-        // Priority 1: Specific Date
-        let selectedTheme = activeThemes.find(t => t.schedule_type === 'specific_date' && t.scheduled_date === todayStr);
-        
-        // Priority 2: Daily Rotation
-        if (!selectedTheme) {
-          const rotationThemes = activeThemes.filter(t => t.schedule_type === 'daily_rotation');
-          if (rotationThemes.length > 0) {
-            selectedTheme = rotationThemes.find(t => t.rotation_day === dayOfMonth) || 
-                            rotationThemes[(dayOfMonth - 1) % rotationThemes.length];
-          }
-        }
-
-        // Priority 3: Always On (Default)
-        if (!selectedTheme) {
-          selectedTheme = activeThemes.find(t => t.schedule_type === 'always') || activeThemes[0];
-        }
-
-        applyTheme(selectedTheme);
-      } catch (err) {
-        applyTheme(DEFAULT_THEMES[0]);
-      }
-    };
-
     const applyTheme = (theme: Partial<Theme>) => {
       setCurrentTheme(theme);
       const root = document.documentElement;
-      root.style.setProperty('--primary-color', theme.primary_color || DEFAULT_THEMES[0].primary_color);
-      root.style.setProperty('--secondary-color', theme.secondary_color || DEFAULT_THEMES[0].secondary_color);
-      root.style.setProperty('--accent-color', theme.accent_color || DEFAULT_THEMES[0].accent_color);
-      root.style.setProperty('--bg-gradient', theme.background_gradient || DEFAULT_THEMES[0].background_gradient);
+      const fallback = getDefaultThemeForToday();
+      root.style.setProperty('--primary-color', theme.primary_color || fallback.primary_color!);
+      root.style.setProperty('--secondary-color', theme.secondary_color || fallback.secondary_color!);
+      root.style.setProperty('--accent-color', theme.accent_color || fallback.accent_color!);
+      root.style.setProperty('--bg-gradient', theme.background_gradient || fallback.background_gradient!);
 
       // Apply custom CSS
       const styleId = 'custom-theme-styles';
-      let styleTag = document.getElementById(styleId);
+      let styleTag = document.getElementById(styleId) as HTMLStyleElement | null;
       if (!styleTag) {
         styleTag = document.createElement('style');
         styleTag.id = styleId;
@@ -129,6 +85,57 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
       const htmlContainer = document.getElementById('custom-theme-html');
       if (htmlContainer) {
         htmlContainer.innerHTML = theme.custom_html || '';
+      }
+    };
+
+    const fetchTheme = async () => {
+      // Terapkan tema default hari ini dulu (rotasi otomatis tanpa Supabase)
+      applyTheme(getDefaultThemeForToday());
+
+      try {
+        const supabase = getSupabase();
+        const { data: themes, error } = await supabase
+          .from('themes')
+          .select('*')
+          .eq('is_active', true);
+
+        if (error) {
+          // Tabel themes belum dibuat — gunakan default, tidak perlu log error
+          return;
+        }
+
+        if (!themes || themes.length === 0) {
+          // Belum ada tema di DB — rotasi default sudah diterapkan di atas
+          return;
+        }
+
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const dayOfMonth = now.getDate();
+
+        // Prioritas 1: Tanggal spesifik
+        let selectedTheme = themes.find(
+          (t) => t.schedule_type === 'specific_date' && t.scheduled_date === todayStr
+        );
+
+        // Prioritas 2: Rotasi harian — cari rotation_day yang cocok, fallback modulo
+        if (!selectedTheme) {
+          const rotationThemes = themes.filter((t) => t.schedule_type === 'daily_rotation');
+          if (rotationThemes.length > 0) {
+            selectedTheme =
+              rotationThemes.find((t) => t.rotation_day === dayOfMonth) ||
+              rotationThemes[(dayOfMonth - 1) % rotationThemes.length];
+          }
+        }
+
+        // Prioritas 3: Selalu aktif
+        if (!selectedTheme) {
+          selectedTheme = themes.find((t) => t.schedule_type === 'always') || themes[0];
+        }
+
+        if (selectedTheme) applyTheme(selectedTheme);
+      } catch (err) {
+        // Supabase gagal — tema default sudah diterapkan, tidak perlu tindakan
       }
     };
 
@@ -156,7 +163,6 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
         backgroundAttachment: 'fixed'
       }}
     >
-      {/* Container for custom HTML injection */}
       <div id="custom-theme-html" className="fixed inset-0 pointer-events-none z-0 overflow-hidden" />
       <FloatingHearts />
 
@@ -246,7 +252,6 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
             </button>
           </nav>
 
-          {/* Logout Modal */}
           <AnimatePresence>
             {isLogoutModalOpen && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">

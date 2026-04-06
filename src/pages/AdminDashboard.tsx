@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Trash2, Download, Upload, LogOut, 
-  MessageSquare, Heart, Smile, Image, 
+  MessageSquare, Heart, Smile, 
   FileSpreadsheet, AlertCircle, CheckCircle2,
-  Inbox, LayoutDashboard, Eye, Pencil, Sparkles
+  Inbox, LayoutDashboard, Eye, Pencil, Sparkles, Copy, Palette
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
@@ -12,14 +12,34 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { getSupabase } from '../lib/supabase';
 import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend
 } from 'recharts';
 import { Message, Greeting, MoodMessage, UserMessage, Theme, MoodLog } from '../types';
 import { MOODS, DEFAULT_THEMES } from '../constants';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
-import { Palette } from 'lucide-react';
+
+// ─── Toast Notification ───────────────────────────────────────────────────────
+function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 20, scale: 0.95 }}
+      className={cn(
+        'fixed bottom-28 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl text-white text-sm font-bold',
+        type === 'success' ? 'bg-gradient-to-r from-green-500 to-emerald-400' : 'bg-gradient-to-r from-red-500 to-rose-400'
+      )}
+    >
+      {type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+      {message}
+    </motion.div>
+  );
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -36,6 +56,14 @@ export default function AdminDashboard() {
   const [editData, setEditData] = useState<any>({});
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newItemData, setNewItemData] = useState<any>({});
+  const [isThemesTableMissing, setIsThemesTableMissing] = useState(false);
+
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
 
   useEffect(() => {
     const auth = localStorage.getItem('admin_auth');
@@ -55,28 +83,17 @@ export default function AdminDashboard() {
     try {
       const supabase = getSupabase();
       const dataToUpdate = { ...editData };
-      
-      // Remove internal fields that shouldn't be updated directly or might cause issues
-      const id = dataToUpdate.id;
+      const itemId = dataToUpdate.id;
       delete dataToUpdate.id;
       delete dataToUpdate.created_at;
 
       if (table === 'messages') {
-        if (!dataToUpdate.day || !dataToUpdate.message) {
-          throw new Error('Hari dan Pesan romantis harus diisi!');
-        }
+        if (!dataToUpdate.day || !dataToUpdate.message) throw new Error('Hari dan Pesan romantis harus diisi!');
         dataToUpdate.day = parseInt(dataToUpdate.day);
         if (isNaN(dataToUpdate.day)) throw new Error('Hari harus berupa angka!');
-        if (dataToUpdate.month) {
-          dataToUpdate.month = parseInt(dataToUpdate.month);
-          if (isNaN(dataToUpdate.month)) throw new Error('Bulan harus berupa angka!');
-        } else {
-          dataToUpdate.month = null;
-        }
+        dataToUpdate.month = dataToUpdate.month ? parseInt(dataToUpdate.month) : null;
       } else if (table === 'greetings') {
-        if (!dataToUpdate.type || !dataToUpdate.text) {
-          throw new Error('Tipe dan Teks sapaan harus diisi!');
-        }
+        if (!dataToUpdate.type || !dataToUpdate.text) throw new Error('Tipe dan Teks sapaan harus diisi!');
       } else if (table === 'themes') {
         if (!dataToUpdate.name) throw new Error('Nama tema harus diisi!');
         if (dataToUpdate.rotation_day) {
@@ -85,18 +102,15 @@ export default function AdminDashboard() {
         }
       }
 
-      const { error: updateError } = await supabase.from(table).update(dataToUpdate).eq('id', id);
+      const { error: updateError } = await supabase.from(table).update(dataToUpdate).eq('id', itemId);
       if (updateError) throw updateError;
-      
       setEditingId(null);
       fetchData();
-      alert('Berhasil memperbarui data!');
+      showToast('Perubahan berhasil disimpan! ✨');
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message, 'error');
     }
   };
-
-  const [isThemesTableMissing, setIsThemesTableMissing] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -116,8 +130,7 @@ export default function AdminDashboard() {
       if (greets.error) throw greets.error;
       if (moods.error) throw moods.error;
       if (inbox.error) throw inbox.error;
-      
-      // Handle missing themes table gracefully (PGRST205)
+
       if (themesData.error) {
         if (themesData.error.code === 'PGRST205') {
           setIsThemesTableMissing(true);
@@ -146,22 +159,19 @@ export default function AdminDashboard() {
   const downloadTemplate = (type: string) => {
     let data: any[] = [];
     let filename = '';
-
     if (type === 'messages') {
       data = [{ day: 1, month: 4, message: 'Contoh pesan romantis...', is_active: true }];
       filename = 'template_pesan_harian.xlsx';
     }
-
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
     XLSX.writeFile(wb, filename);
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>, table: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
@@ -170,15 +180,13 @@ export default function AdminDashboard() {
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
-
         const supabase = getSupabase();
         const { error: importError } = await supabase.from(table).insert(data);
         if (importError) throw importError;
-        
-        alert('Import berhasil!');
+        showToast('Import berhasil! 🎉');
         fetchData();
       } catch (err: any) {
-        alert('Gagal import: ' + err.message);
+        showToast('Gagal import: ' + err.message, 'error');
       }
     };
     reader.readAsBinaryString(file);
@@ -191,8 +199,9 @@ export default function AdminDashboard() {
       const { error: delError } = await supabase.from(table).delete().eq('id', id);
       if (delError) throw delError;
       fetchData();
+      showToast('Data berhasil dihapus.');
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message, 'error');
     }
   };
 
@@ -209,30 +218,20 @@ export default function AdminDashboard() {
 
       if (activeTab === 'messages') {
         table = 'messages';
-        if (!data.day || !data.message) {
-          throw new Error('Hari dan Pesan romantis harus diisi!');
-        }
+        if (!data.day || !data.message) throw new Error('Hari dan Pesan romantis harus diisi!');
         data.day = parseInt(data.day);
-        if (isNaN(data.day)) {
-          throw new Error('Hari harus berupa angka!');
-        }
-        if (data.month) {
-          data.month = parseInt(data.month);
-          if (isNaN(data.month)) throw new Error('Bulan harus berupa angka!');
-        } else {
-          data.month = null;
-        }
+        if (isNaN(data.day)) throw new Error('Hari harus berupa angka!');
+        data.month = data.month ? parseInt(data.month) : null;
       } else if (activeTab === 'greetings') {
         table = 'greetings';
-        if (!data.type || !data.text) {
-          throw new Error('Tipe dan Teks sapaan harus diisi!');
-        }
+        if (!data.type || !data.text) throw new Error('Tipe dan Teks sapaan harus diisi!');
       } else if (activeTab === 'themes') {
         table = 'themes';
-        if (!data.name) {
-          throw new Error('Nama tema harus diisi!');
-        }
-        data.background_gradient = data.background_gradient || 'linear-gradient(to bottom right, #fff1f2, #fffafa)';
+        if (!data.name) throw new Error('Nama tema harus diisi!');
+        if (!data.primary_color) throw new Error('Primary color harus dipilih!');
+        if (!data.secondary_color) throw new Error('Secondary color harus dipilih!');
+        if (!data.accent_color) data.accent_color = '#fdf2f8';
+        data.background_gradient = data.background_gradient || 'linear-gradient(135deg, #fff1f2 0%, #fce7f3 100%)';
         data.schedule_type = data.schedule_type || 'always';
         if (data.rotation_day) {
           data.rotation_day = parseInt(data.rotation_day);
@@ -241,21 +240,90 @@ export default function AdminDashboard() {
       }
 
       if (!table) return;
-
       const { error: addError } = await supabase.from(table).insert(data);
       if (addError) throw addError;
-      
       setIsAddModalOpen(false);
       setNewItemData({});
       fetchData();
-      alert('Berhasil menambahkan data baru!');
+      showToast('Data baru berhasil ditambahkan! ✨');
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message, 'error');
     }
   };
 
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => showToast(`${label} disalin! 📋`));
+  };
+
+  // ─── Prompt templates ────────────────────────────────────────────────────────
+  const PROMPT_TEMPLATES = [
+    {
+      label: 'Tema Romantis CSS',
+      desc: 'Generate CSS custom untuk memperindah tampilan',
+      prompt: `Saya punya website romantis bernama "Triana's Daily Love" dengan Tailwind CSS v4.
+Tolong buatkan Custom CSS untuk membuat tampilan lebih cantik dan romantis.
+Yang ingin saya ubah: [tulis keinginan Anda, contoh: kartu pesan lebih bulat dan ada efek glitter]
+
+Format output: hanya kode CSS murni (bukan Tailwind), siap di-paste ke field "Custom CSS".
+Gunakan !important jika perlu.
+Selector utama yang bisa dipakai: .glass-card, .text-romantic-gradient, .bg-romantic-gradient, .heart-pulse
+CSS variable yang tersedia: --primary-color, --secondary-color, --accent-color, --bg-gradient`
+    },
+    {
+      label: 'Custom HTML Dekoratif',
+      desc: 'Generate HTML untuk elemen hias di background',
+      prompt: `Saya ingin menambahkan elemen dekoratif HTML ke website romantis saya.
+Elemen ini akan muncul di lapisan background (z-index rendah, pointer-events: none).
+Saya ingin: [tulis keinginan Anda, contoh: efek salju merah muda, atau tulisan berjalan "I Love You"]
+
+Format output: kode HTML + CSS inline yang mandiri (tidak butuh file eksternal).
+Ukuran container: full screen (100vw x 100vh), position: fixed.
+Jangan gunakan javascript yang kompleks. Gunakan CSS animation saja.`
+    },
+    {
+      label: 'Warna Tema Romantis',
+      desc: 'Minta rekomendasi kombinasi warna romantis',
+      prompt: `Tolong rekomendasikan kombinasi warna romantis untuk website saya.
+Suasana yang saya inginkan: [pilih: pink lembut / merah membara / ungu misterius / biru langit / emas mewah]
+
+Berikan output dalam format:
+- primary_color: #xxxxxx (warna utama, untuk tombol dan teks highlight)
+- secondary_color: #xxxxxx (warna kedua, untuk aksen)
+- accent_color: #xxxxxx (warna latar lembut)
+- background_gradient: linear-gradient(...) (gradien latar halaman)
+- background_url: https://... (URL foto dari Unsplash yang cocok, format: ?auto=format&fit=crop&q=80&w=1920)`
+    },
+    {
+      label: 'Tema Spesial Hari Tertentu',
+      desc: 'Generate tema untuk momen spesial',
+      prompt: `Saya ingin membuat tema khusus untuk momen spesial: [tulis momen, contoh: ulang tahun Triana, hari jadi, Valentine]
+Tanggalnya: [tulis tanggal, format: YYYY-MM-DD]
+
+Tolong buatkan:
+1. Nama tema yang romantis
+2. Kombinasi warna yang sesuai momen (primary, secondary, accent)
+3. background_gradient yang indah
+4. Custom CSS pendek untuk efek khusus (misal: bintang berkedip, warna emas)
+5. Custom HTML pendek untuk elemen dekoratif (misal: confetti, text berjalan)
+
+Output siap di-paste ke form Tambah Tema di Admin Dashboard.`
+    }
+  ];
+
   return (
     <Layout fullWidth>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <Toast
+            key={toast.message}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] gap-6 relative">
         {/* Mobile Sidebar Toggle */}
         <button 
@@ -265,7 +333,6 @@ export default function AdminDashboard() {
           <LayoutDashboard className="w-6 h-6" />
         </button>
 
-        {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {isSidebarOpen && (
             <motion.div
@@ -282,7 +349,7 @@ export default function AdminDashboard() {
         <motion.aside 
           initial={false}
           animate={{ 
-            x: isSidebarOpen ? 0 : (window.innerWidth < 768 ? -300 : 0),
+            x: isSidebarOpen ? 0 : (typeof window !== 'undefined' && window.innerWidth < 768 ? -300 : 0),
             opacity: 1
           }}
           className={cn(
@@ -303,14 +370,11 @@ export default function AdminDashboard() {
                 { id: 'mood_stats', label: 'Statistik Mood', icon: Smile },
                 { id: 'themes', label: 'Tema & BG', icon: Palette },
                 { id: 'inbox', label: 'Inbox Pesan', icon: Inbox },
-                { id: 'guide', label: 'Panduan Custom', icon: FileSpreadsheet },
+                { id: 'guide', label: 'Panduan & Prompt', icon: Sparkles },
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id as any);
-                    setIsSidebarOpen(false);
-                  }}
+                  onClick={() => { setActiveTab(tab.id as any); setIsSidebarOpen(false); }}
                   className={cn(
                     "w-full px-5 py-4 rounded-2xl flex items-center gap-4 text-sm font-bold transition-all duration-300 group",
                     activeTab === tab.id 
@@ -321,10 +385,7 @@ export default function AdminDashboard() {
                   <tab.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", activeTab === tab.id ? "text-white" : "text-gray-500")} />
                   <span className="flex-1 text-left">{tab.label}</span>
                   {tab.id === 'inbox' && userMessages.length > 0 && (
-                    <span className={cn(
-                      "px-2 py-0.5 rounded-full text-[10px] font-bold",
-                      activeTab === tab.id ? "bg-white text-pink-500" : "bg-pink-100 text-pink-500"
-                    )}>
+                    <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold", activeTab === tab.id ? "bg-white text-pink-500" : "bg-pink-100 text-pink-500")}>
                       {userMessages.length}
                     </span>
                   )}
@@ -344,9 +405,9 @@ export default function AdminDashboard() {
           </div>
         </motion.aside>
 
-        {/* Main Content Area */}
+        {/* Main Content */}
         <div className="flex-1 space-y-8 min-w-0">
-          {/* Header (Desktop Only) */}
+          {/* Header Desktop */}
           <div className="hidden md:flex justify-between items-center bg-white/60 backdrop-blur-md p-6 rounded-[2rem] border border-white/40 shadow-sm">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-pink-50 rounded-2xl flex items-center justify-center text-pink-500">
@@ -355,7 +416,7 @@ export default function AdminDashboard() {
                 {activeTab === 'mood_stats' && <Smile className="w-6 h-6" />}
                 {activeTab === 'themes' && <Palette className="w-6 h-6" />}
                 {activeTab === 'inbox' && <Inbox className="w-6 h-6" />}
-                {activeTab === 'guide' && <FileSpreadsheet className="w-6 h-6" />}
+                {activeTab === 'guide' && <Sparkles className="w-6 h-6" />}
               </div>
               <div>
                 <h1 className="text-lg font-bold text-gray-900 capitalize">{activeTab.replace('_', ' ')}</h1>
@@ -379,193 +440,215 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
+
           {/* Content Area */}
           <div className="bg-white/80 backdrop-blur-md rounded-[2.5rem] p-8 shadow-xl shadow-pink-100/10 border border-white/40 min-h-[500px]">
-            {activeTab === 'guide' && (
-              <div className="space-y-8">
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-display font-bold text-gray-800">Panduan Custom Tema</h2>
-                  <p className="text-sm text-gray-500">Pelajari cara menggunakan fitur advanced untuk mempercantik website Anda.</p>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="p-6 bg-blue-50 rounded-3xl space-y-4">
-                    <div className="flex items-center gap-3 text-blue-600">
-                      <LayoutDashboard className="w-6 h-6" />
-                      <h3 className="font-bold">Custom CSS</h3>
-                    </div>
-                    <p className="text-xs text-blue-800/70 leading-relaxed">
-                      Gunakan CSS untuk mengubah tampilan elemen yang sudah ada. Anda bisa mengubah warna, ukuran, hingga bentuk elemen.
-                    </p>
-                    <div className="bg-white/60 p-4 rounded-xl font-mono text-[10px] space-y-2 border border-blue-100">
-                      <p className="text-blue-500 font-bold">// Contoh: Membuat kartu lebih bulat</p>
-                      <p>.glass-card {'{'} border-radius: 60px !important; {'}'}</p>
-                      <p className="text-blue-500 font-bold mt-2">// Contoh: Mengubah warna teks utama</p>
-                      <p>.text-gray-800 {'{'} color: #ff69b4 !important; {'}'}</p>
-                    </div>
-                  </div>
-
-                  <div className="p-6 bg-pink-50 rounded-3xl space-y-4">
-                    <div className="flex items-center gap-3 text-pink-600">
-                      <Eye className="w-6 h-6" />
-                      <h3 className="font-bold">Custom HTML</h3>
-                    </div>
-                    <p className="text-xs text-pink-800/70 leading-relaxed">
-                      Gunakan HTML untuk menyisipkan elemen baru ke dalam halaman. Elemen ini akan muncul di lapisan latar belakang.
-                    </p>
-                    <div className="bg-white/60 p-4 rounded-xl font-mono text-[10px] space-y-2 border border-pink-100">
-                      <p className="text-pink-500 font-bold">// Contoh: Teks berjalan</p>
-                      <p>{'<marquee className="text-pink-400 font-bold">I Love You Triana!</marquee>'}</p>
-                      <p className="text-pink-500 font-bold mt-2">// Contoh: Gambar hiasan</p>
-                      <p>{'<img src="URL_GAMBAR" className="w-20 opacity-50" />'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-8 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-[2.5rem] border border-indigo-100 space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-500 shadow-sm">
-                      <Sparkles className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-indigo-900">Gunakan AI untuk Custom Tema</h3>
-                      <p className="text-xs text-indigo-600">Salin prompt di bawah ini dan gunakan di ChatGPT/Gemini untuk membuat kode custom.</p>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4">
-                    <div className="p-4 bg-white/60 rounded-2xl space-y-2 border border-indigo-100">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Prompt untuk CSS</span>
-                        <button 
-                          onClick={() => {
-                            navigator.clipboard.writeText("Saya ingin mengubah tampilan website saya yang menggunakan Tailwind CSS. Tolong buatkan kode CSS murni (bukan Tailwind classes) untuk mengubah: [Sebutkan elemen yang ingin diubah, misal: warna background, bentuk tombol, atau font]. Berikan kodenya saja.");
-                            alert("Prompt disalin!");
-                          }}
-                          className="text-[10px] text-indigo-500 font-bold hover:underline"
-                        >
-                          Salin Prompt
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-indigo-900 italic">"Saya ingin mengubah tampilan website saya yang menggunakan Tailwind CSS. Tolong buatkan kode CSS murni..."</p>
-                    </div>
-
-                    <div className="p-4 bg-white/60 rounded-2xl space-y-2 border border-indigo-100">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Prompt untuk HTML</span>
-                        <button 
-                          onClick={() => {
-                            navigator.clipboard.writeText("Tolong buatkan kode HTML sederhana untuk elemen dekoratif website, misalnya: [Sebutkan elemen, misal: animasi salju, teks berjalan, atau widget ucapan]. Pastikan kodenya mandiri dan tidak memerlukan file eksternal.");
-                            alert("Prompt disalin!");
-                          }}
-                          className="text-[10px] text-indigo-500 font-bold hover:underline"
-                        >
-                          Salin Prompt
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-indigo-900 italic">"Tolong buatkan kode HTML sederhana untuk elemen dekoratif website, misalnya: animasi salju..."</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 bg-gray-50 rounded-3xl space-y-2 border border-gray-100">
-                  <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-orange-400" /> Tips Penting
-                  </h4>
-                  <ul className="text-xs text-gray-500 space-y-2 list-disc pl-4">
-                    <li>Gunakan <code className="bg-gray-200 px-1 rounded">!important</code> di akhir kode CSS jika perubahan tidak muncul.</li>
-                    <li>Pastikan kode HTML yang Anda masukkan aman dan tidak merusak tata letak utama.</li>
-                    <li>Anda bisa menggunakan class Tailwind CSS langsung di dalam kode HTML kustom Anda.</li>
-                  </ul>
-                </div>
-              </div>
-            )}
-
+            {/* ── MESSAGES TAB ── */}
             {activeTab === 'messages' && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h2 className="font-bold text-gray-800">Daftar Pesan Harian</h2>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => downloadTemplate('messages')}
-                    className="p-2 text-pink-500 hover:bg-pink-50 rounded-xl transition-all flex items-center gap-2 text-xs font-bold"
-                  >
-                    <Download className="w-4 h-4" /> Template
-                  </button>
-                  <label className="p-2 bg-pink-500 text-white rounded-xl cursor-pointer hover:bg-pink-600 transition-all flex items-center gap-2 text-xs font-bold">
-                    <Upload className="w-4 h-4" /> Import Excel
-                    <input type="file" className="hidden" onChange={(e) => handleImport(e, 'messages')} />
-                  </label>
+                  <div className="flex gap-2">
+                    <button onClick={() => downloadTemplate('messages')} className="p-2 text-pink-500 hover:bg-pink-50 rounded-xl transition-all flex items-center gap-2 text-xs font-bold">
+                      <Download className="w-4 h-4" /> Template
+                    </button>
+                    <label className="p-2 bg-pink-500 text-white rounded-xl cursor-pointer hover:bg-pink-600 transition-all flex items-center gap-2 text-xs font-bold">
+                      <Upload className="w-4 h-4" /> Import Excel
+                      <input type="file" className="hidden" onChange={(e) => handleImport(e, 'messages')} />
+                    </label>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="space-y-4">
-                {messages.map((msg) => (
-                  <div key={msg.id} className="p-5 bg-gray-50 rounded-2xl flex justify-between items-start gap-4 group border border-transparent hover:border-pink-100 transition-all">
-                    {editingId === msg.id ? (
-                      <div className="flex-1 space-y-2">
-                        <div className="flex gap-2">
-                          <input 
-                            type="number" 
-                            value={editData.day || ''} 
-                            onChange={(e) => setEditData({...editData, day: e.target.value})}
-                            className="w-20 p-2 border rounded-lg text-xs"
-                            placeholder="Hari"
-                          />
-                          <input 
-                            type="number" 
-                            value={editData.month || ''} 
-                            onChange={(e) => setEditData({...editData, month: e.target.value})}
-                            className="w-20 p-2 border rounded-lg text-xs"
-                            placeholder="Bulan"
-                          />
+                <div className="space-y-4">
+                  {messages.map((msg) => (
+                    <div key={msg.id} className="p-5 bg-gray-50 rounded-2xl flex justify-between items-start gap-4 group border border-transparent hover:border-pink-100 transition-all">
+                      {editingId === msg.id ? (
+                        <div className="flex-1 space-y-2">
+                          <div className="flex gap-2">
+                            <input type="number" value={editData.day || ''} onChange={(e) => setEditData({...editData, day: e.target.value})} className="w-20 p-2 border rounded-lg text-xs" placeholder="Hari" />
+                            <input type="number" value={editData.month || ''} onChange={(e) => setEditData({...editData, month: e.target.value})} className="w-20 p-2 border rounded-lg text-xs" placeholder="Bulan" />
+                          </div>
+                          <textarea value={editData.message} onChange={(e) => setEditData({...editData, message: e.target.value})} className="w-full p-2 border rounded-lg text-xs min-h-[80px]" />
+                          <div className="flex gap-2">
+                            <button onClick={() => handleSaveEdit('messages')} className="px-3 py-1 bg-green-500 text-white rounded-lg text-[10px] font-bold">Simpan</button>
+                            <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold">Batal</button>
+                          </div>
                         </div>
-                        <textarea 
-                          value={editData.message} 
-                          onChange={(e) => setEditData({...editData, message: e.target.value})}
-                          className="w-full p-2 border rounded-lg text-xs min-h-[80px]"
-                        />
-                        <div className="flex gap-2">
-                          <button onClick={() => handleSaveEdit('messages')} className="px-3 py-1 bg-green-500 text-white rounded-lg text-[10px] font-bold">Simpan</button>
-                          <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold">Batal</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
+                      ) : (
+                        <div className="space-y-1 flex-1">
                           <span className="px-2 py-0.5 bg-pink-100 text-pink-600 rounded-md text-[10px] font-bold">
                             Tgl {msg.day}{msg.month ? `/${msg.month}` : ' (Bulanan)'}
                           </span>
+                          <p className="text-sm text-gray-600 leading-relaxed">{msg.message}</p>
                         </div>
-                        <p className="text-sm text-gray-600 leading-relaxed">{msg.message}</p>
+                      )}
+                      <div className="flex flex-col gap-2">
+                        <button onClick={() => handleEdit(msg)} className="p-2 text-gray-300 hover:text-blue-500 transition-colors"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete(msg.id, 'messages')} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>
-                    )}
-                    <div className="flex flex-col gap-2">
-                      <button 
-                        onClick={() => handleEdit(msg)}
-                        className="p-2 text-gray-300 hover:text-blue-500 transition-colors"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(msg.id, 'messages')}
-                        className="p-2 text-gray-300 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    </div>
+                  ))}
+                  <button onClick={addItem} className="w-full py-4 border-2 border-dashed border-gray-100 rounded-2xl text-gray-400 hover:border-pink-200 hover:text-pink-400 transition-all flex items-center justify-center gap-2 font-bold text-sm">
+                    <Plus className="w-4 h-4" /> Tambah Pesan Baru
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── GREETINGS TAB ── */}
+            {activeTab === 'greetings' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="font-bold text-gray-800">Sapaan (Greetings)</h2>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{greetings.length} sapaan tersimpan</p>
+                  </div>
+                  <button onClick={addItem} className="px-4 py-2 bg-pink-500 text-white rounded-xl text-xs font-bold hover:bg-pink-600 transition-all flex items-center gap-2">
+                    <Plus className="w-4 h-4" /> Tambah Sapaan
+                  </button>
+                </div>
+
+                {greetings.length === 0 ? (
+                  <div className="text-center py-16 space-y-3">
+                    <Heart className="w-12 h-12 mx-auto text-pink-200" />
+                    <p className="text-sm text-gray-400 italic">Belum ada sapaan. Tambahkan sapaan pertama!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Group by type */}
+                    {['daily', 'random'].map((type) => {
+                      const filtered = greetings.filter((g) => g.type === type);
+                      if (filtered.length === 0) return null;
+                      return (
+                        <div key={type} className="space-y-2">
+                          <div className="flex items-center gap-2 px-1">
+                            <span className={cn(
+                              "text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider",
+                              type === 'daily' ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
+                            )}>
+                              {type === 'daily' ? '📅 Harian' : '🎲 Acak'} ({filtered.length})
+                            </span>
+                            <div className="flex-1 h-[1px] bg-gray-100" />
+                          </div>
+                          {filtered.map((g) => (
+                            <div key={g.id} className="p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-pink-100 transition-all">
+                              {editingId === g.id ? (
+                                <div className="space-y-2">
+                                  <select value={editData.type} onChange={(e) => setEditData({...editData, type: e.target.value})} className="w-full p-2 border rounded-lg text-xs">
+                                    <option value="daily">Daily (Harian)</option>
+                                    <option value="random">Random (Acak)</option>
+                                  </select>
+                                  <input type="text" value={editData.text} onChange={(e) => setEditData({...editData, text: e.target.value})} className="w-full p-2 border rounded-lg text-xs" />
+                                  <div className="flex gap-2">
+                                    <button onClick={() => handleSaveEdit('greetings')} className="px-3 py-1 bg-green-500 text-white rounded-lg text-[10px] font-bold">Simpan</button>
+                                    <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold">Batal</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex justify-between items-start gap-3">
+                                  <p className="text-sm text-gray-700 font-medium leading-relaxed flex-1 italic">"{g.text}"</p>
+                                  <div className="flex gap-1 flex-shrink-0">
+                                    <button onClick={() => handleEdit(g)} className="p-2 text-gray-300 hover:text-blue-500 transition-colors"><Pencil className="w-4 h-4" /></button>
+                                    <button onClick={() => handleDelete(g.id, 'greetings')} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── MOOD STATS TAB ── */}
+            {activeTab === 'mood_stats' && (
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="bg-white/60 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/40 shadow-sm space-y-6">
+                    <h2 className="font-bold text-gray-900">Persentase Mood</h2>
+                    <div className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={MOODS.map(m => ({
+                              name: m.label,
+                              value: moodLogs.filter(log => log.mood === m.type).length,
+                              color: m.hex
+                            })).filter(d => d.value > 0)}
+                            cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
+                          >
+                            {MOODS.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.hex} />
+                            ))}
+                          </Pie>
+                          <Tooltip contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                          <Legend verticalAlign="bottom" height={36} />
+                        </PieChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
-                ))}
-                <button 
-                  onClick={addItem}
-                  className="w-full py-4 border-2 border-dashed border-gray-100 rounded-2xl text-gray-400 hover:border-pink-200 hover:text-pink-400 transition-all flex items-center justify-center gap-2 font-bold text-sm"
-                >
-                  <Plus className="w-4 h-4" /> Tambah Pesan Baru
-                </button>
+                  <div className="bg-white/60 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/40 shadow-sm space-y-6">
+                    <h2 className="font-bold text-gray-900">Ringkasan Mood</h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      {MOODS.map(m => {
+                        const count = moodLogs.filter(log => log.mood === m.type).length;
+                        return (
+                          <div key={m.type} className="p-4 rounded-2xl bg-white/40 border border-white/60 flex flex-col items-center text-center space-y-2">
+                            <span className="text-2xl">{m.emoji}</span>
+                            <span className="text-xs font-bold text-gray-900">{m.label}</span>
+                            <span className="text-2xl font-display font-bold text-pink-500">{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white/60 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/40 shadow-sm space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h2 className="font-bold text-gray-900">Log Mood Terbaru</h2>
+                    <button onClick={() => {
+                      const data = moodLogs.map(log => ({
+                        Mood: MOODS.find(m => m.type === log.mood)?.label || log.mood,
+                        Emoji: MOODS.find(m => m.type === log.mood)?.emoji || '',
+                        Waktu: format(new Date(log.created_at), 'dd MMM yyyy HH:mm'),
+                        DeviceID: log.device_id
+                      }));
+                      const ws = XLSX.utils.json_to_sheet(data);
+                      const wb = XLSX.utils.book_new();
+                      XLSX.utils.book_append_sheet(wb, ws, 'Mood Logs');
+                      XLSX.writeFile(wb, 'mood_logs.xlsx');
+                    }} className="px-4 py-2 bg-pink-50 text-pink-500 rounded-xl text-xs font-bold hover:bg-pink-100 transition-all flex items-center gap-2">
+                      <Download className="w-4 h-4" /> Export Excel
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {moodLogs.length === 0 ? (
+                      <div className="text-center py-12 text-gray-400 italic text-sm">Belum ada data mood.</div>
+                    ) : (
+                      moodLogs.slice(0, 50).map((log) => (
+                        <div key={log.id} className="p-4 bg-white/40 rounded-2xl border border-white/60 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-pink-50 rounded-xl flex items-center justify-center text-xl">
+                              {MOODS.find(m => m.type === log.mood)?.emoji}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-gray-900">{MOODS.find(m => m.type === log.mood)?.label}</p>
+                              <p className="text-[10px] text-gray-500">{format(new Date(log.created_at), 'dd MMMM yyyy, HH:mm', { locale: id })}</p>
+                            </div>
+                          </div>
+                          <div className="text-[10px] font-mono text-gray-300">{log.device_id.substring(0, 8)}...</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
+            {/* ── INBOX TAB ── */}
             {activeTab === 'inbox' && (
               <div className="space-y-6">
                 <h2 className="font-bold text-gray-900">Pesan dari Triana</h2>
@@ -584,12 +667,7 @@ export default function AdminDashboard() {
                         <p className="text-gray-800 font-medium leading-relaxed italic">"{msg.content}"</p>
                         <div className="flex justify-between items-center text-[10px] text-pink-600 font-bold uppercase tracking-widest">
                           <span>{format(new Date(msg.created_at), 'd MMM yyyy, HH:mm')}</span>
-                          <button 
-                            onClick={() => handleDelete(msg.id, 'user_messages')}
-                            className="hover:text-red-500 transition-colors"
-                          >
-                            Hapus
-                          </button>
+                          <button onClick={() => handleDelete(msg.id, 'user_messages')} className="hover:text-red-500 transition-colors">Hapus</button>
                         </div>
                       </div>
                     ))
@@ -598,447 +676,303 @@ export default function AdminDashboard() {
               </div>
             )}
 
-          {activeTab === 'mood_stats' && (
-            <div className="space-y-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Pie Chart Card */}
-                <div className="bg-white/60 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/40 shadow-sm space-y-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-pink-50 rounded-2xl flex items-center justify-center text-pink-500">
-                      <Smile className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h2 className="font-bold text-gray-900">Persentase Mood</h2>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Distribusi perasaan Triana</p>
-                    </div>
-                  </div>
-                  
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={MOODS.map(m => ({
-                            name: m.label,
-                            value: moodLogs.filter(log => log.mood === m.type).length,
-                            color: m.hex
-                          })).filter(d => d.value > 0)}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {MOODS.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.hex} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                        />
-                        <Legend verticalAlign="bottom" height={36}/>
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Summary Card */}
-                <div className="bg-white/60 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/40 shadow-sm space-y-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-pink-50 rounded-2xl flex items-center justify-center text-pink-500">
-                      <LayoutDashboard className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h2 className="font-bold text-gray-900">Ringkasan Mood</h2>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total pilihan mood</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {MOODS.map(m => {
-                      const count = moodLogs.filter(log => log.mood === m.type).length;
-                      return (
-                        <div key={m.type} className="p-4 rounded-2xl bg-white/40 border border-white/60 flex flex-col items-center text-center space-y-2">
-                          <span className="text-2xl">{m.emoji}</span>
-                          <span className="text-xs font-bold text-gray-900">{m.label}</span>
-                          <span className="text-2xl font-display font-bold text-pink-500">{count}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Mood Logs List */}
-              <div className="bg-white/60 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/40 shadow-sm space-y-6">
+            {/* ── THEMES TAB ── */}
+            {activeTab === 'themes' && (
+              <div className="space-y-6">
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-pink-50 rounded-2xl flex items-center justify-center text-pink-500">
-                      <Inbox className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h2 className="font-bold text-gray-900">Log Mood Terbaru</h2>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Riwayat perasaan Triana</p>
-                    </div>
+                  <div>
+                    <h2 className="font-bold text-gray-800">Tema & Background</h2>
+                    <p className="text-[10px] text-gray-400">Atur visual website secara menyeluruh</p>
                   </div>
-                  <button 
-                    onClick={() => {
-                      const data = moodLogs.map(log => ({
-                        Mood: MOODS.find(m => m.type === log.mood)?.label || log.mood,
-                        Emoji: MOODS.find(m => m.type === log.mood)?.emoji || '',
-                        Waktu: format(new Date(log.created_at), 'dd MMM yyyy HH:mm'),
-                        DeviceID: log.device_id
-                      }));
-                      const ws = XLSX.utils.json_to_sheet(data);
-                      const wb = XLSX.utils.book_new();
-                      XLSX.utils.book_append_sheet(wb, ws, "Mood Logs");
-                      XLSX.writeFile(wb, "mood_logs.xlsx");
-                    }}
-                    className="px-4 py-2 bg-pink-50 text-pink-500 rounded-xl text-xs font-bold hover:bg-pink-100 transition-all flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" /> Export Excel
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {moodLogs.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400 italic text-sm">Belum ada data mood yang tercatat.</div>
-                  ) : (
-                    moodLogs.slice(0, 50).map((log) => (
-                      <div key={log.id} className="p-4 bg-white/40 rounded-2xl border border-white/60 flex items-center justify-between group hover:bg-white/60 transition-all">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-pink-50 rounded-xl flex items-center justify-center text-xl">
-                            {MOODS.find(m => m.type === log.mood)?.emoji}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-gray-900">
-                              {MOODS.find(m => m.type === log.mood)?.label}
-                            </p>
-                            <p className="text-[10px] text-gray-500 font-medium">
-                              {format(new Date(log.created_at), 'dd MMMM yyyy, HH:mm', { locale: id })}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-[10px] font-mono text-gray-300 group-hover:text-gray-400 transition-colors">
-                          ID: {log.device_id.substring(0, 8)}...
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'greetings' && (
-            <div className="space-y-6">
-              <h2 className="font-bold text-gray-800">Sapaan (Greetings)</h2>
-              <div className="space-y-4">
-                {greetings.map((g) => (
-                  <div key={g.id} className="p-4 bg-gray-50 rounded-2xl flex justify-between items-center border border-transparent hover:border-pink-100 transition-all">
-                    {editingId === g.id ? (
-                      <div className="flex-1 space-y-2">
-                        <select 
-                          value={editData.type} 
-                          onChange={(e) => setEditData({...editData, type: e.target.value})}
-                          className="w-full p-2 border rounded-lg text-xs"
-                        >
-                          <option value="daily">Daily</option>
-                          <option value="random">Random</option>
-                        </select>
-                        <input 
-                          type="text"
-                          value={editData.text} 
-                          onChange={(e) => setEditData({...editData, text: e.target.value})}
-                          className="w-full p-2 border rounded-lg text-xs"
-                        />
-                        <div className="flex gap-2">
-                          <button onClick={() => handleSaveEdit('greetings')} className="px-3 py-1 bg-green-500 text-white rounded-lg text-[10px] font-bold">Simpan</button>
-                          <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold">Batal</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-1 flex-1">
-                        <span className="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full uppercase tracking-wider">{g.type}</span>
-                        <p className="text-sm text-gray-600 font-medium leading-tight">{g.text}</p>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <button onClick={() => handleEdit(g)} className="p-2 text-gray-300 hover:text-blue-500 transition-colors"><Pencil className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(g.id, 'greetings')} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  </div>
-                ))}
-                <button 
-                  onClick={addItem}
-                  className="w-full py-4 border-2 border-dashed border-gray-100 rounded-2xl text-gray-400 hover:border-pink-200 hover:text-pink-400 transition-all flex items-center justify-center gap-2 font-bold text-sm"
-                >
-                  <Plus className="w-4 h-4" /> Tambah Sapaan Baru
-                </button>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'themes' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="font-bold text-gray-800">Tema & Background</h2>
-                  <p className="text-[10px] text-gray-400">Atur visual website secara menyeluruh</p>
-                </div>
-                <div className="flex gap-2">
                   {!isThemesTableMissing && (
-                    <button 
-                      onClick={addItem}
-                      className="px-4 py-2 bg-pink-500 text-white rounded-xl text-xs font-bold hover:bg-pink-600 transition-all"
-                    >
-                      Tambah Tema Baru
+                    <button onClick={addItem} className="px-4 py-2 bg-pink-500 text-white rounded-xl text-xs font-bold hover:bg-pink-600 transition-all">
+                      Tambah Tema
                     </button>
                   )}
                 </div>
-              </div>
 
-              {isThemesTableMissing ? (
-                <div className="p-8 bg-red-50 rounded-[2rem] border border-red-100 space-y-6 text-center">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-                    <AlertCircle className="w-8 h-8 text-red-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-bold text-red-800">Tabel 'themes' Perlu Diperbarui</h3>
-                    <p className="text-xs text-red-600 leading-relaxed max-w-sm mx-auto">
-                      Fitur tema sekarang mendukung Background dan Custom CSS. Silakan jalankan perintah SQL berikut untuk memperbarui tabel:
+                {/* Info box: default themes always work */}
+                <div className="p-4 bg-green-50 rounded-2xl border border-green-100 flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-green-800">Tema Otomatis Sudah Aktif</p>
+                    <p className="text-[11px] text-green-700 leading-relaxed mt-0.5">
+                      Website sudah memiliki 3 tema romantis yang berganti otomatis setiap hari (Blossom Pink → Sunset Love → Violet Dream) meski tanpa mengisi tabel di bawah ini. Tabel tema di bawah bersifat <strong>opsional</strong> — untuk tema custom tambahan.
                     </p>
                   </div>
-                  <div className="bg-gray-900 p-4 rounded-xl text-left overflow-x-auto">
-                    <pre className="text-[10px] text-green-400 font-mono leading-relaxed">
-{`-- Jalankan ini jika tabel belum ada:
-create table themes (
+                </div>
+
+                {isThemesTableMissing ? (
+                  <div className="p-8 bg-amber-50 rounded-[2rem] border border-amber-100 space-y-6">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="w-6 h-6 text-amber-500" />
+                      <div>
+                        <h3 className="font-bold text-amber-800">Tabel 'themes' belum dibuat di Supabase</h3>
+                        <p className="text-xs text-amber-700">Jalankan SQL berikut di Supabase SQL Editor untuk mengaktifkan fitur tema custom:</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-900 p-4 rounded-xl overflow-x-auto relative">
+                      <button
+                        onClick={() => copyToClipboard(`create table themes (
   id uuid default gen_random_uuid() primary key,
   name text not null,
-  primary_color text not null,
-  secondary_color text not null,
-  accent_color text not null,
-  background_gradient text not null,
+  primary_color text not null default '#ec4899',
+  secondary_color text not null default '#fb7185',
+  accent_color text not null default '#fdf2f8',
+  background_gradient text not null default 'linear-gradient(135deg, #fff1f2, #fce7f3)',
   background_url text,
   custom_css text,
   custom_html text,
-  schedule_type text default 'always',
+  schedule_type text default 'always' check (schedule_type in ('always','specific_date','daily_rotation')),
   scheduled_date text,
   rotation_day integer,
   is_active boolean default true,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamptz default now()
 );
-
--- Jalankan ini jika tabel sudah ada tapi kolom baru belum ada:
-alter table themes add column if not exists background_url text;
-alter table themes add column if not exists custom_css text;
-alter table themes add column if not exists custom_html text;
-alter table themes add column if not exists schedule_type text default 'always';
-alter table themes add column if not exists scheduled_date text;
-alter table themes add column if not exists rotation_day integer;
-
--- Enable RLS
 alter table themes enable row level security;
-
--- Create policies
-create policy "Allow public read access" on themes for select using (true);
-create policy "Allow admin all access" on themes for all using (true);`}
-                    </pre>
-                  </div>
-                  <button 
-                    onClick={fetchData}
-                    className="px-6 py-3 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-100"
-                  >
-                    Cek Lagi Setelah Menjalankan SQL
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {themes.map((theme) => (
-                      <div key={theme.id} className="p-6 bg-gray-50 rounded-3xl space-y-4 border border-gray-100 group relative hover:shadow-md transition-all">
-                        {editingId === theme.id ? (
-                          <div className="space-y-4">
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-gray-400 uppercase">Nama Tema</label>
-                              <input 
-                                type="text" 
-                                value={editData.name} 
-                                onChange={(e) => setEditData({...editData, name: e.target.value})}
-                                className="w-full p-2 border rounded-lg text-xs"
-                              />
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase">Primary</label>
-                                <input type="color" value={editData.primary_color} onChange={(e) => setEditData({...editData, primary_color: e.target.value})} className="w-full h-8 rounded" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase">Secondary</label>
-                                <input type="color" value={editData.secondary_color} onChange={(e) => setEditData({...editData, secondary_color: e.target.value})} className="w-full h-8 rounded" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase">Accent</label>
-                                <input type="color" value={editData.accent_color} onChange={(e) => setEditData({...editData, accent_color: e.target.value})} className="w-full h-8 rounded" />
-                              </div>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-gray-400 uppercase">Background URL (Image/Gradient)</label>
-                              <input 
-                                type="text" 
-                                value={editData.background_url || ''} 
-                                onChange={(e) => setEditData({...editData, background_url: e.target.value})}
-                                className="w-full p-2 border rounded-lg text-xs"
-                                placeholder="https://... atau linear-gradient(...)"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase">Jadwal</label>
-                                <select 
-                                  value={editData.schedule_type || 'always'} 
-                                  onChange={(e) => setEditData({...editData, schedule_type: e.target.value})}
-                                  className="w-full p-2 border rounded-lg text-xs"
-                                >
-                                  <option value="always">Selalu Aktif</option>
-                                  <option value="specific_date">Tanggal Spesifik</option>
-                                  <option value="daily_rotation">Rotasi Harian</option>
-                                </select>
-                              </div>
-                              {editData.schedule_type === 'specific_date' && (
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tanggal (YYYY-MM-DD)</label>
-                                  <input 
-                                    type="date" 
-                                    value={editData.scheduled_date || ''} 
-                                    onChange={(e) => setEditData({...editData, scheduled_date: e.target.value})}
-                                    className="w-full p-2 border rounded-lg text-xs"
-                                  />
-                                </div>
-                              )}
-                              {editData.schedule_type === 'daily_rotation' && (
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold text-gray-400 uppercase">Hari ke- (1-31)</label>
-                                  <input 
-                                    type="number" 
-                                    min="1" max="31"
-                                    value={editData.rotation_day || ''} 
-                                    onChange={(e) => setEditData({...editData, rotation_day: e.target.value})}
-                                    className="w-full p-2 border rounded-lg text-xs"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-gray-400 uppercase">Custom CSS (Advanced)</label>
-                              <textarea 
-                                value={editData.custom_css || ''} 
-                                onChange={(e) => setEditData({...editData, custom_css: e.target.value})}
-                                className="w-full p-2 border rounded-lg text-[10px] font-mono min-h-[80px]"
-                                placeholder=".main-card { border-radius: 50px; }"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-gray-400 uppercase">Custom HTML (Advanced)</label>
-                              <textarea 
-                                value={editData.custom_html || ''} 
-                                onChange={(e) => setEditData({...editData, custom_html: e.target.value})}
-                                className="w-full p-2 border rounded-lg text-[10px] font-mono min-h-[80px]"
-                                placeholder="<div>Konten kustom</div>"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <button onClick={() => handleSaveEdit('themes')} className="flex-1 py-2 bg-green-500 text-white rounded-xl text-[10px] font-bold">Simpan</button>
-                              <button onClick={() => setEditingId(null)} className="flex-1 py-2 bg-gray-200 text-gray-600 rounded-xl text-[10px] font-bold">Batal</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h3 className="font-bold text-gray-800">{theme.name}</h3>
-                                <div className="flex gap-2 mt-1">
-                                  <span className={cn(
-                                    "text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider",
-                                    theme.is_active ? "bg-green-100 text-green-600" : "bg-gray-200 text-gray-500"
-                                  )}>
-                                    {theme.is_active ? 'Aktif' : 'Nonaktif'}
-                                  </span>
-                                  {theme.custom_css && (
-                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-blue-100 text-blue-600">
-                                      CSS
-                                    </span>
-                                  )}
-                                  {theme.custom_html && (
-                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-purple-100 text-purple-600">
-                                      HTML
-                                    </span>
-                                  )}
-                                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-orange-100 text-orange-600">
-                                    {theme.schedule_type === 'specific_date' ? `Tgl: ${theme.scheduled_date}` : 
-                                     theme.schedule_type === 'daily_rotation' ? `Hari: ${theme.rotation_day}` : 'Selalu'}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex gap-1">
-                                <button 
-                                  onClick={() => handleEdit(theme)}
-                                  className="p-2 text-gray-300 hover:text-blue-500 transition-colors"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </button>
-                                <button 
-                                  onClick={() => handleDelete(theme.id, 'themes')}
-                                  className="p-2 text-gray-300 hover:text-red-500 transition-colors"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                            <div 
-                              className="w-full h-24 rounded-2xl border border-gray-200 shadow-inner overflow-hidden relative"
-                              style={{ 
-                                backgroundImage: theme.background_url?.startsWith('http') ? `url(${theme.background_url})` : (theme.background_url || theme.background_gradient),
-                                backgroundColor: (!theme.background_url?.startsWith('http') && !theme.background_url?.includes('gradient') && !theme.background_gradient?.includes('gradient')) ? (theme.background_url || theme.background_gradient) : undefined,
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center'
-                              }}
-                            >
-                              <div className="absolute bottom-2 left-2 flex gap-1.5">
-                                <div className="w-5 h-5 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: theme.primary_color }} />
-                                <div className="w-5 h-5 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: theme.secondary_color }} />
-                                <div className="w-5 h-5 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: theme.accent_color }} />
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {themes.length === 0 && (
-                    <div className="text-center py-10 space-y-4">
-                      <p className="text-sm text-gray-400 italic">Belum ada tema custom. Gunakan tema default?</p>
-                      <button 
-                        onClick={async () => {
-                          try {
-                            const supabase = getSupabase();
-                            const { error: addError } = await supabase.from('themes').insert(DEFAULT_THEMES);
-                            if (addError) throw addError;
-                            fetchData();
-                          } catch (err: any) {
-                            alert(err.message);
-                          }
-                        }}
-                        className="px-6 py-2 bg-pink-50 text-pink-500 rounded-xl text-xs font-bold hover:bg-pink-100 transition-all"
+create policy "Public read" on themes for select using (true);
+create policy "Admin all" on themes for all using (true);`, 'SQL')}
+                        className="absolute top-3 right-3 px-3 py-1 bg-white/10 text-white text-[10px] rounded-lg hover:bg-white/20 transition-all flex items-center gap-1"
                       >
-                        Pasang 3 Tema Default
+                        <Copy className="w-3 h-3" /> Salin SQL
                       </button>
+                      <pre className="text-[10px] text-green-400 font-mono leading-relaxed whitespace-pre-wrap">
+{`create table themes (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  primary_color text not null default '#ec4899',
+  secondary_color text not null default '#fb7185',
+  accent_color text not null default '#fdf2f8',
+  background_gradient text not null default 'linear-gradient(135deg, #fff1f2, #fce7f3)',
+  background_url text,
+  custom_css text,
+  custom_html text,
+  schedule_type text default 'always'
+    check (schedule_type in ('always','specific_date','daily_rotation')),
+  scheduled_date text,
+  rotation_day integer,
+  is_active boolean default true,
+  created_at timestamptz default now()
+);
+alter table themes enable row level security;
+create policy "Public read" on themes for select using (true);
+create policy "Admin all" on themes for all using (true);`}
+                      </pre>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+                    <button onClick={fetchData} className="px-6 py-3 bg-amber-500 text-white rounded-xl text-xs font-bold hover:bg-amber-600 transition-all">
+                      Cek Lagi Setelah Jalankan SQL
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {themes.map((theme) => (
+                        <div key={theme.id} className="p-6 bg-gray-50 rounded-3xl space-y-4 border border-gray-100 hover:shadow-md transition-all">
+                          {editingId === theme.id ? (
+                            <div className="space-y-3">
+                              <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Nama Tema</label>
+                                <input type="text" value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} className="w-full p-2 border rounded-lg text-xs mt-1" />
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                {['primary_color','secondary_color','accent_color'].map((key) => (
+                                  <div key={key}>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">{key.replace('_color','').replace('_',' ')}</label>
+                                    <input type="color" value={editData[key] || '#ec4899'} onChange={(e) => setEditData({...editData, [key]: e.target.value})} className="w-full h-8 rounded mt-1" />
+                                  </div>
+                                ))}
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Background URL / Gradient</label>
+                                <input type="text" value={editData.background_url || ''} onChange={(e) => setEditData({...editData, background_url: e.target.value})} className="w-full p-2 border rounded-lg text-xs mt-1" placeholder="https://... atau linear-gradient(...)" />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-[10px] font-bold text-gray-400 uppercase">Jadwal</label>
+                                  <select value={editData.schedule_type || 'always'} onChange={(e) => setEditData({...editData, schedule_type: e.target.value})} className="w-full p-2 border rounded-lg text-xs mt-1">
+                                    <option value="always">Selalu Aktif</option>
+                                    <option value="specific_date">Tanggal Spesifik</option>
+                                    <option value="daily_rotation">Rotasi Harian</option>
+                                  </select>
+                                </div>
+                                {editData.schedule_type === 'specific_date' && (
+                                  <div>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tanggal</label>
+                                    <input type="date" value={editData.scheduled_date || ''} onChange={(e) => setEditData({...editData, scheduled_date: e.target.value})} className="w-full p-2 border rounded-lg text-xs mt-1" />
+                                  </div>
+                                )}
+                                {editData.schedule_type === 'daily_rotation' && (
+                                  <div>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Hari ke- (1-31)</label>
+                                    <input type="number" min="1" max="31" value={editData.rotation_day || ''} onChange={(e) => setEditData({...editData, rotation_day: e.target.value})} className="w-full p-2 border rounded-lg text-xs mt-1" />
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Custom CSS</label>
+                                <textarea value={editData.custom_css || ''} onChange={(e) => setEditData({...editData, custom_css: e.target.value})} className="w-full p-2 border rounded-lg text-[10px] font-mono min-h-[80px] mt-1" placeholder=".glass-card { border-radius: 60px !important; }" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Custom HTML</label>
+                                <textarea value={editData.custom_html || ''} onChange={(e) => setEditData({...editData, custom_html: e.target.value})} className="w-full p-2 border rounded-lg text-[10px] font-mono min-h-[80px] mt-1" placeholder="<div style='...'>konten dekoratif</div>" />
+                              </div>
+                              <div className="flex gap-2">
+                                <button onClick={() => handleSaveEdit('themes')} className="flex-1 py-2 bg-green-500 text-white rounded-xl text-[10px] font-bold">Simpan</button>
+                                <button onClick={() => setEditingId(null)} className="flex-1 py-2 bg-gray-200 text-gray-600 rounded-xl text-[10px] font-bold">Batal</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-bold text-gray-800">{theme.name}</h3>
+                                  <div className="flex gap-1 mt-1 flex-wrap">
+                                    <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full uppercase", theme.is_active ? "bg-green-100 text-green-600" : "bg-gray-200 text-gray-500")}>
+                                      {theme.is_active ? 'Aktif' : 'Nonaktif'}
+                                    </span>
+                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 uppercase">
+                                      {theme.schedule_type === 'specific_date' ? `Tgl: ${theme.scheduled_date}` : theme.schedule_type === 'daily_rotation' ? `Hari: ${theme.rotation_day}` : 'Selalu'}
+                                    </span>
+                                    {theme.custom_css && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">CSS</span>}
+                                    {theme.custom_html && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">HTML</span>}
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  <button onClick={() => handleEdit(theme)} className="p-2 text-gray-300 hover:text-blue-500 transition-colors"><Pencil className="w-4 h-4" /></button>
+                                  <button onClick={() => handleDelete(theme.id, 'themes')} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                              </div>
+                              <div className="w-full h-20 rounded-2xl overflow-hidden relative border border-gray-200"
+                                style={{
+                                  backgroundImage: theme.background_url?.startsWith('http') ? `url(${theme.background_url})` : undefined,
+                                  background: !theme.background_url?.startsWith('http') ? (theme.background_url || theme.background_gradient) : undefined,
+                                  backgroundSize: 'cover', backgroundPosition: 'center'
+                                }}
+                              >
+                                <div className="absolute bottom-2 left-2 flex gap-1.5">
+                                  {[theme.primary_color, theme.secondary_color, theme.accent_color].map((c, i) => (
+                                    <div key={i} className="w-5 h-5 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: c }} />
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {themes.length === 0 && (
+                      <div className="text-center py-10 space-y-4">
+                        <p className="text-sm text-gray-400 italic">Belum ada tema custom. Pasang tema default?</p>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const supabase = getSupabase();
+                              const { error: addError } = await supabase.from('themes').insert(DEFAULT_THEMES);
+                              if (addError) throw addError;
+                              fetchData();
+                              showToast('3 tema default berhasil dipasang! ✨');
+                            } catch (err: any) { showToast(err.message, 'error'); }
+                          }}
+                          className="px-6 py-2 bg-pink-50 text-pink-500 rounded-xl text-xs font-bold hover:bg-pink-100 transition-all"
+                        >
+                          Pasang 3 Tema Default
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ── GUIDE TAB ── */}
+            {activeTab === 'guide' && (
+              <div className="space-y-8">
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-gray-800">Panduan & Prompt AI</h2>
+                  <p className="text-sm text-gray-500 mt-1">Gunakan prompt di bawah ini untuk membuat tema lebih indah dengan bantuan AI (ChatGPT / Gemini / Claude).</p>
+                </div>
+
+                {/* How it works */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  {[
+                    { step: '1', title: 'Salin prompt', desc: 'Pilih prompt yang sesuai kebutuhan Anda, lalu salin.' },
+                    { step: '2', title: 'Tanya AI', desc: 'Paste ke ChatGPT, Gemini, atau Claude. Isi bagian [dalam kurung] sesuai keinginan.' },
+                    { step: '3', title: 'Paste ke form', desc: 'Salin hasil output AI ke field Custom CSS / Custom HTML di tab Tema.' },
+                  ].map((s) => (
+                    <div key={s.step} className="p-5 bg-pink-50 rounded-2xl border border-pink-100 space-y-2">
+                      <div className="w-8 h-8 bg-pink-500 text-white rounded-xl flex items-center justify-center font-bold text-sm">{s.step}</div>
+                      <p className="font-bold text-gray-800 text-sm">{s.title}</p>
+                      <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Prompt cards */}
+                <div className="space-y-4">
+                  {PROMPT_TEMPLATES.map((pt, i) => (
+                    <div key={i} className="bg-white border border-gray-100 rounded-3xl p-6 space-y-3 shadow-sm">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-bold text-gray-800 text-sm">{pt.label}</h3>
+                          <p className="text-[11px] text-gray-400 mt-0.5">{pt.desc}</p>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(pt.prompt, pt.label)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-pink-50 text-pink-600 rounded-xl text-[11px] font-bold hover:bg-pink-100 transition-all flex-shrink-0"
+                        >
+                          <Copy className="w-3.5 h-3.5" /> Salin Prompt
+                        </button>
+                      </div>
+                      <div className="bg-gray-50 rounded-2xl p-4 font-mono text-[11px] text-gray-600 leading-relaxed whitespace-pre-wrap border border-gray-100">
+                        {pt.prompt}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CSS selectors reference */}
+                <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 space-y-4">
+                  <h3 className="font-bold text-blue-800 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Referensi Selector CSS & Variabel</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">Class yang bisa dipakai</p>
+                      {['.glass-card', '.text-romantic-gradient', '.bg-romantic-gradient', '.heart-pulse', '.optimize-gpu', '.no-scrollbar'].map((cls) => (
+                        <code key={cls} className="block text-[11px] bg-white/60 px-3 py-1 rounded-lg text-blue-800 font-mono">{cls}</code>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">CSS Variable</p>
+                      {['--primary-color', '--secondary-color', '--accent-color', '--bg-gradient'].map((v) => (
+                        <code key={v} className="block text-[11px] bg-white/60 px-3 py-1 rounded-lg text-blue-800 font-mono">var({v})</code>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-white/60 p-4 rounded-2xl space-y-2">
+                    <p className="text-[11px] font-bold text-blue-700">Contoh CSS yang berfungsi:</p>
+                    <pre className="text-[11px] text-blue-900 font-mono leading-relaxed">{`.glass-card {
+  border-radius: 60px !important;
+  border: 2px solid rgba(255,182,193,0.5) !important;
+  box-shadow: 0 20px 60px rgba(236,72,153,0.15) !important;
+}
+.text-romantic-gradient {
+  background-image: linear-gradient(to right, #ec4899, #f97316) !important;
+}`}</pre>
+                  </div>
+                </div>
+
+                {/* Tips */}
+                <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100 space-y-2">
+                  <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2"><AlertCircle className="w-4 h-4 text-orange-400" /> Tips Penting</h4>
+                  <ul className="text-xs text-gray-500 space-y-2 list-disc pl-4 leading-relaxed">
+                    <li>Gunakan <code className="bg-gray-200 px-1 rounded">!important</code> jika perubahan CSS tidak muncul.</li>
+                    <li>Custom HTML akan muncul di lapisan <strong>background</strong> halaman — gunakan untuk dekorasi, bukan konten utama.</li>
+                    <li>Elemen HTML kustom tidak boleh menggunakan <code className="bg-gray-200 px-1 rounded">position: fixed</code> tanpa <code className="bg-gray-200 px-1 rounded">z-index</code> yang tepat.</li>
+                    <li>Untuk animasi di Custom HTML, gunakan CSS <code className="bg-gray-200 px-1 rounded">@keyframes</code> — jangan gunakan library JS eksternal.</li>
+                    <li>Jadwal <strong>"Rotasi Harian"</strong>: isi "Hari ke-" dengan angka 1–31 sesuai tanggal di mana tema ini aktif.</li>
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1047,197 +981,106 @@ create policy "Allow admin all access" on themes for all using (true);`}
       <AnimatePresence>
         {isAddModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsAddModalOpen(false)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-[2rem] p-8 shadow-2xl relative z-10 w-full max-w-md space-y-6"
-            >
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-gray-800">
-                  Tambah {activeTab === 'messages' ? 'Pesan Baru' : activeTab === 'greetings' ? 'Sapaan Baru' : 'Tema Baru'}
-                </h3>
-                <p className="text-xs text-gray-400">Masukkan data yang diperlukan di bawah ini.</p>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white rounded-[2rem] p-8 shadow-2xl relative z-10 w-full max-w-md space-y-6 max-h-[90vh] overflow-y-auto">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Tambah {activeTab === 'messages' ? 'Pesan Baru' : activeTab === 'greetings' ? 'Sapaan Baru' : 'Tema Baru'}</h3>
+                <p className="text-xs text-gray-400 mt-1">Masukkan data yang diperlukan di bawah ini.</p>
               </div>
 
               <div className="space-y-4">
-                {activeTab === 'themes' && (
-                  <>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nama Tema</label>
-                      <input 
-                        type="text" 
-                        onChange={(e) => setNewItemData({...newItemData, name: e.target.value})}
-                        className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-400 outline-none"
-                        placeholder="Contoh: Romantic Pink"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Primary Color</label>
-                        <input 
-                          type="color" 
-                          onChange={(e) => setNewItemData({...newItemData, primary_color: e.target.value})}
-                          className="w-full h-10 p-1 bg-gray-50 border border-gray-100 rounded-xl outline-none"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Secondary Color</label>
-                        <input 
-                          type="color" 
-                          onChange={(e) => setNewItemData({...newItemData, secondary_color: e.target.value})}
-                          className="w-full h-10 p-1 bg-gray-50 border border-gray-100 rounded-xl outline-none"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Accent Color (Background Soft)</label>
-                      <input 
-                        type="color" 
-                        onChange={(e) => setNewItemData({...newItemData, accent_color: e.target.value})}
-                        className="w-full h-10 p-1 bg-gray-50 border border-gray-100 rounded-xl outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Background URL (Image/Gradient)</label>
-                      <input 
-                        type="text" 
-                        onChange={(e) => setNewItemData({...newItemData, background_url: e.target.value})}
-                        className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-400 outline-none"
-                        placeholder="https://... atau linear-gradient(...)"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Jadwal</label>
-                        <select 
-                          onChange={(e) => setNewItemData({...newItemData, schedule_type: e.target.value})}
-                          className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-400 outline-none"
-                        >
-                          <option value="always">Selalu Aktif</option>
-                          <option value="specific_date">Tanggal Spesifik</option>
-                          <option value="daily_rotation">Rotasi Harian</option>
-                        </select>
-                      </div>
-                      {newItemData.schedule_type === 'specific_date' && (
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tanggal</label>
-                          <input 
-                            type="date" 
-                            onChange={(e) => setNewItemData({...newItemData, scheduled_date: e.target.value})}
-                            className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-400 outline-none"
-                          />
-                        </div>
-                      )}
-                      {newItemData.schedule_type === 'daily_rotation' && (
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hari (1-31)</label>
-                          <input 
-                            type="number" 
-                            min="1" max="31"
-                            onChange={(e) => setNewItemData({...newItemData, rotation_day: parseInt(e.target.value)})}
-                            className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-400 outline-none"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Custom CSS (Advanced)</label>
-                      <textarea 
-                        onChange={(e) => setNewItemData({...newItemData, custom_css: e.target.value})}
-                        className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-[10px] font-mono focus:ring-2 focus:ring-pink-400 outline-none min-h-[80px]"
-                        placeholder=".main-card { border-radius: 50px; }"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Custom HTML (Advanced)</label>
-                      <textarea 
-                        onChange={(e) => setNewItemData({...newItemData, custom_html: e.target.value})}
-                        className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-[10px] font-mono focus:ring-2 focus:ring-pink-400 outline-none min-h-[80px]"
-                        placeholder="<div>Konten kustom</div>"
-                      />
-                    </div>
-                  </>
-                )}
                 {activeTab === 'messages' && (
                   <>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hari (1-31)</label>
-                        <input 
-                          type="number" 
-                          onChange={(e) => setNewItemData({...newItemData, day: e.target.value})}
-                          className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-400 outline-none"
-                          placeholder="Contoh: 1"
-                        />
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hari (1-31) *</label>
+                        <input type="number" onChange={(e) => setNewItemData({...newItemData, day: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="Contoh: 14" />
                       </div>
-                      <div className="space-y-1">
+                      <div>
                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Bulan (Opsional)</label>
-                        <input 
-                          type="number" 
-                          onChange={(e) => setNewItemData({...newItemData, month: e.target.value})}
-                          className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-400 outline-none"
-                          placeholder="1-12"
-                        />
+                        <input type="number" onChange={(e) => setNewItemData({...newItemData, month: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="1-12" />
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pesan Romantis</label>
-                      <textarea 
-                        onChange={(e) => setNewItemData({...newItemData, message: e.target.value})}
-                        className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-400 outline-none min-h-[120px] resize-none"
-                        placeholder="Tuliskan pesanmu di sini..."
-                      />
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pesan Romantis *</label>
+                      <textarea onChange={(e) => setNewItemData({...newItemData, message: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200 min-h-[120px] resize-none" placeholder="Tuliskan pesan cintamu di sini..." />
                     </div>
                   </>
                 )}
 
                 {activeTab === 'greetings' && (
                   <>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipe Sapaan</label>
-                      <select 
-                        onChange={(e) => setNewItemData({...newItemData, type: e.target.value})}
-                        className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-400 outline-none"
-                      >
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipe Sapaan *</label>
+                      <select onChange={(e) => setNewItemData({...newItemData, type: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200">
                         <option value="">Pilih Tipe</option>
-                        <option value="daily">Daily (Harian)</option>
-                        <option value="random">Random (Acak)</option>
+                        <option value="daily">Daily — muncul setiap hari (pakai 1 saja)</option>
+                        <option value="random">Random — dipilih acak dari semua random</option>
                       </select>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Teks Sapaan</label>
-                      <input 
-                        type="text"
-                        onChange={(e) => setNewItemData({...newItemData, text: e.target.value})}
-                        className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-400 outline-none"
-                        placeholder="Contoh: Selamat pagi, Sayang!"
-                      />
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Teks Sapaan *</label>
+                      <input type="text" onChange={(e) => setNewItemData({...newItemData, text: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="Contoh: Selamat pagi, Sayangku..." />
+                    </div>
+                  </>
+                )}
+
+                {activeTab === 'themes' && (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nama Tema *</label>
+                      <input type="text" onChange={(e) => setNewItemData({...newItemData, name: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="Contoh: Midnight Rose" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[['primary_color', 'Primary *'], ['secondary_color', 'Secondary *'], ['accent_color', 'Accent']].map(([key, label]) => (
+                        <div key={key}>
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">{label}</label>
+                          <input type="color" defaultValue={key === 'primary_color' ? '#ec4899' : key === 'secondary_color' ? '#fb7185' : '#fdf2f8'} onChange={(e) => setNewItemData({...newItemData, [key]: e.target.value})} className="w-full h-10 p-1 bg-gray-50 border border-gray-100 rounded-xl mt-1" />
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Background URL (foto) atau Gradient CSS</label>
+                      <input type="text" onChange={(e) => setNewItemData({...newItemData, background_url: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="https://images.unsplash.com/... atau linear-gradient(...)" />
+                      <p className="text-[10px] text-gray-400 mt-1">Foto gratis: unsplash.com — tambahkan <code className="bg-gray-100 px-1 rounded">?auto=format&fit=crop&q=80&w=1920</code> di akhir URL</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Jadwal Tampil</label>
+                        <select onChange={(e) => setNewItemData({...newItemData, schedule_type: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200">
+                          <option value="always">Selalu Aktif</option>
+                          <option value="specific_date">Tanggal Spesifik</option>
+                          <option value="daily_rotation">Rotasi Harian</option>
+                        </select>
+                      </div>
+                      {newItemData.schedule_type === 'specific_date' && (
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tanggal (YYYY-MM-DD)</label>
+                          <input type="date" onChange={(e) => setNewItemData({...newItemData, scheduled_date: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" />
+                        </div>
+                      )}
+                      {newItemData.schedule_type === 'daily_rotation' && (
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hari ke- (1-31)</label>
+                          <input type="number" min="1" max="31" onChange={(e) => setNewItemData({...newItemData, rotation_day: parseInt(e.target.value)})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Custom CSS (opsional — hasil generate AI)</label>
+                      <textarea onChange={(e) => setNewItemData({...newItemData, custom_css: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-[11px] font-mono mt-1 outline-none focus:ring-2 focus:ring-pink-200 min-h-[80px]" placeholder={`.glass-card { border-radius: 60px !important; }`} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Custom HTML (opsional — elemen dekoratif)</label>
+                      <textarea onChange={(e) => setNewItemData({...newItemData, custom_html: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-[11px] font-mono mt-1 outline-none focus:ring-2 focus:ring-pink-200 min-h-[80px]" placeholder={`<div style="position:fixed;top:0;left:0;width:100%;pointer-events:none">...</div>`} />
                     </div>
                   </>
                 )}
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button 
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-all"
-                >
-                  Batal
-                </button>
-                <button 
-                  onClick={handleSaveNew}
-                  className="flex-1 py-3 bg-pink-500 text-white rounded-2xl font-bold text-sm shadow-lg shadow-pink-100 hover:bg-pink-600 transition-all"
-                >
-                  Simpan
-                </button>
+                <button onClick={() => setIsAddModalOpen(false)} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-all">Batal</button>
+                <button onClick={handleSaveNew} className="flex-1 py-3 bg-pink-500 text-white rounded-2xl font-bold text-sm shadow-lg shadow-pink-100 hover:bg-pink-600 transition-all">Simpan</button>
               </div>
             </motion.div>
           </div>

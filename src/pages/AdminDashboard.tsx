@@ -364,7 +364,7 @@ export default function AdminDashboard() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => window.open('/?preview_date=' + new Date().toISOString().split('T')[0], '_blank')}
+                onClick={() => window.open('/home?preview_date=' + new Date().toISOString().split('T')[0], '_blank')}
                 className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all flex items-center gap-2 text-xs font-bold"
               >
                 <Eye className="w-4 h-4" /> Preview App

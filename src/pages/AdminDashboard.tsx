@@ -119,25 +119,27 @@ export default function AdminDashboard() {
     try {
       const supabase = getSupabase();
       
-      // Gunakan query yang lebih stabil
+      // Mengambil secara paralel tetapi kita handle error secara spesifik nantinya, 
+      // tidak menggunakan throw jika salah satu bermasalah.
+      const msgsPromise = supabase.from('messages').select('*').order('month', { ascending: true }).order('day', { ascending: true });
+      const greetsPromise = supabase.from('greetings').select('*');
+      const moodsPromise = supabase.from('mood_messages').select('*').order('created_at', { ascending: false }).limit(200);
+      const inboxPromise = supabase.from('user_messages').select('*').order('created_at', { ascending: false });
+      const themesPromise = supabase.from('themes').select('*').order('created_at', { ascending: true });
+
       const [msgs, greets, moods, inbox, themesData] = await Promise.all([
-        supabase.from('messages').select('*').order('month', { ascending: true }).order('day', { ascending: true }),
-        supabase.from('greetings').select('*'),
-        supabase.from('mood_logs').select('*').order('created_at', { ascending: false }).limit(200),
-        supabase.from('user_messages').select('*').order('created_at', { ascending: false }),
-        supabase.from('themes').select('*').order('created_at', { ascending: true })
+        msgsPromise, greetsPromise, moodsPromise, inboxPromise, themesPromise
       ]);
 
-      if (msgs.error) throw msgs.error;
-      if (greets.error) throw greets.error;
-      if (moods.error) throw moods.error;
-      if (inbox.error) throw inbox.error;
+      if (msgs.error) console.error('Messages fetch error:', msgs.error);
+      if (greets.error) console.error('Greetings fetch error:', greets.error);
+      if (moods.error) console.error('Mood logs fetch error:', moods.error);
+      if (inbox.error) console.error('User messages fetch error:', inbox.error);
 
       if (themesData.error) {
         if (themesData.error.code === 'PGRST205' || themesData.error.message.includes('relation "themes" does not exist')) {
           setIsThemesTableMissing(true);
         } else {
-          // Abaikan error lain jika tabel themes memang sengaja belum dibuat
           console.warn('Themes fetch error:', themesData.error);
         }
       }

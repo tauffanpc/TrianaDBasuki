@@ -52,7 +52,30 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         scale: 2, // High resolution
         useCORS: true,
         allowTaint: false,
-        backgroundColor: null
+        backgroundColor: null,
+        onclone: (clonedDoc: any) => {
+          try {
+            // Ultimate fallback to strip out any OKLAB/OKLCH colors injected by Tailwind V4
+            const elements = clonedDoc.querySelectorAll('*');
+            elements.forEach((el: any) => {
+              const compStyles = window.getComputedStyle(el);
+              const props = ['color', 'backgroundColor', 'borderColor', 'textDecorationColor', 'fill', 'stroke'];
+              props.forEach(p => {
+                const val = compStyles[p as any] || '';
+                if (val.includes('oklab') || val.includes('oklch') || val.includes('color(')) {
+                  if (p.includes('color') || p.includes('fill') || p.includes('stroke')) {
+                    el.style[p] = '#ec4899'; // Safe fallback pink
+                  }
+                  if (p === 'backgroundColor') {
+                    el.style[p] = '#ffffff'; // Safe fallback white
+                  }
+                }
+              });
+            });
+          } catch (e) {
+            console.error('onclone error:', e);
+          }
+        }
       });
 
       cardRef.current.style.transform = originalTransform;
@@ -139,16 +162,16 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
               {cardTheme === 'glass' && (
                 <div className="absolute inset-x-8 inset-y-16 flex flex-col items-center justify-center">
                   <div className="w-[85%] bg-white/30 backdrop-blur-3xl rounded-[4rem] border-4 border-white/60 p-20 flex flex-col items-center text-center shadow-2xl" style={{ boxShadow: '0 25px 50px -12px rgba(236,72,153,0.2)' }}>
-                    <Heart className="w-24 h-24 text-[#ec4899] fill-[#ec4899] animate-pulse mb-8" />
-                    <h2 className="text-5xl font-display italic text-[#111827] mb-16 px-8">
+                    <Heart className="w-24 h-24 animate-pulse mb-8" style={{ color: '#ec4899', fill: '#ec4899' }} />
+                    <h2 className="text-5xl font-display italic mb-16 px-8" style={{ color: '#111827' }}>
                       "{greeting?.text || 'Semoga harimu menyenangkan, Sayang.'}"
                     </h2>
-                    <p className="text-4xl text-[#1f2937] leading-relaxed font-serif px-8">
+                    <p className="text-4xl leading-relaxed font-serif px-8" style={{ color: '#1f2937' }}>
                       {message?.message || 'Maaf Sayang, Tauffan belum menulis pesan untuk hari ini.'}
                     </p>
-                    <div className="mt-20 w-40 h-2 bg-gradient-to-r from-transparent via-[#f472b6] to-transparent rounded-full" />
-                    <p className="mt-12 text-3xl font-bold tracking-[0.3em] uppercase text-[#be185d] opacity-60">Triana's Daily Love</p>
-                    <p className="mt-4 text-2xl text-[#db2777] font-medium">{format(new Date(), 'd MMMM yyyy', {locale: id})}</p>
+                    <div className="mt-20 w-40 h-2 bg-gradient-to-r from-transparent to-transparent rounded-full" style={{ backgroundImage: 'linear-gradient(to right, transparent, #f472b6, transparent)' }} />
+                    <p className="mt-12 text-3xl font-bold tracking-[0.3em] uppercase opacity-60" style={{ color: '#be185d' }}>Triana's Daily Love</p>
+                    <p className="mt-4 text-2xl font-medium" style={{ color: '#db2777' }}>{format(new Date(), 'd MMMM yyyy', {locale: id})}</p>
                   </div>
                 </div>
               )}
@@ -156,8 +179,8 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
               {/* === THEME 2: POLAROID CLASSIC === */}
               {cardTheme === 'polaroid' && (
                 <div className="flex-1 flex flex-col items-center justify-center p-16">
-                  <div className="w-[800px] bg-[#ffffff] p-12 pb-32 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] transform -rotate-2 relative border border-[#e5e7eb]">
-                    <div className="w-full aspect-[4/3] bg-[#fce7f3] mb-16 flex items-center justify-center relative overflow-hidden shadow-inner">
+                  <div className="w-[800px] p-12 pb-32 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] transform -rotate-2 relative border" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb' }}>
+                    <div className="w-full aspect-[4/3] mb-16 flex items-center justify-center relative overflow-hidden shadow-inner" style={{ backgroundColor: '#fce7f3' }}>
                       {(base64Bg || currentBg).startsWith('http') || (base64Bg || currentBg).startsWith('data:') ? (
                          <img src={base64Bg || currentBg} crossOrigin="anonymous" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply" alt="bg" />
                       ) : (
@@ -165,20 +188,20 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                       )}
                       
                       <div className="relative z-10 text-center px-16">
-                         <h2 className="text-[3.5rem] leading-tight font-serif italic text-[#1f2937] font-medium drop-shadow-sm">"{greeting?.text}"</h2>
+                         <h2 className="text-[3.5rem] leading-tight font-serif italic font-medium drop-shadow-sm" style={{ color: '#1f2937' }}>"{greeting?.text}"</h2>
                       </div>
                     </div>
-                    <p className="text-[2.5rem] text-[#1f2937] leading-relaxed font-sans text-center px-8">
+                    <p className="text-[2.5rem] leading-relaxed font-sans text-center px-8" style={{ color: '#1f2937' }}>
                       {message?.message || 'Belum ada pesan.'}
                     </p>
-                    <div className="absolute bottom-16 right-16 text-[2.5rem] font-sans italic text-[#ec4899] transform -rotate-12 opacity-80 decoration-wavy">
+                    <div className="absolute bottom-16 right-16 text-[2.5rem] font-sans italic transform -rotate-12 opacity-80 decoration-wavy" style={{ color: '#ec4899' }}>
                       A beautiful memory
                     </div>
                   </div>
-                  <div className="mt-24 bg-[rgba(255,255,255,0.8)] px-12 py-6 rounded-full shadow-lg border border-[#fce7f3] flex items-center gap-4">
-                    <Heart className="w-8 h-8 text-[#f472b6] fill-current" />
-                    <p className="text-3xl font-bold tracking-[0.2em] uppercase text-[#f472b6]">Triana's Daily Love • {format(new Date(), 'dd/MM/yyyy')}</p>
-                    <Heart className="w-8 h-8 text-[#f472b6] fill-current" />
+                  <div className="mt-24 px-12 py-6 rounded-full shadow-lg border flex items-center gap-4" style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: '#fce7f3' }}>
+                    <Heart className="w-8 h-8" style={{ color: '#f472b6', fill: '#f472b6' }} />
+                    <p className="text-3xl font-bold tracking-[0.2em] uppercase" style={{ color: '#f472b6' }}>Triana's Daily Love • {format(new Date(), 'dd/MM/yyyy')}</p>
+                    <Heart className="w-8 h-8" style={{ color: '#f472b6', fill: '#f472b6' }} />
                   </div>
                 </div>
               )}
@@ -188,24 +211,24 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                 <div className="flex-1 flex flex-col p-24 pt-32">
                   <div className="w-full h-full border-[8px] border-double rounded-3xl p-24 relative flex flex-col" style={{ borderColor: 'rgba(120,53,15,0.2)' }}>
                     <div className="absolute top-16 right-16 opacity-30">
-                       <Sparkles className="w-32 h-32 text-[#78350f]" />
+                       <Sparkles className="w-32 h-32" style={{ color: '#78350f' }} />
                     </div>
-                    <p className="text-4xl text-[#78350f] uppercase tracking-[0.5em] font-bold mb-4">SURAT HARI INI</p>
+                    <p className="text-4xl uppercase tracking-[0.5em] font-bold mb-4" style={{ color: '#78350f' }}>SURAT HARI INI</p>
                     <p className="text-3xl font-medium mb-24" style={{ color: 'rgba(146,64,14,0.6)' }}>{format(new Date(), 'EEEE, d MMMM yyyy', {locale: id})}</p>
                     
-                    <h2 className="text-[4.5rem] leading-tight font-serif italic text-[#431407] mb-20">
+                    <h2 className="text-[4.5rem] leading-tight font-serif italic mb-20" style={{ color: '#431407' }}>
                       "{greeting?.text}"
                     </h2>
                     
                     <div className="flex-1 px-8">
-                      <p className="text-[2.75rem] text-[#78350f] leading-[2em] font-serif">
+                      <p className="text-[2.75rem] leading-[2em] font-serif" style={{ color: '#78350f' }}>
                         {message?.message || 'Belum ada pesan.'}
                       </p>
                     </div>
 
                     <div className="mt-auto flex justify-between items-end border-t-4 pt-16" style={{ borderColor: 'rgba(120,53,15,0.1)' }}>
-                       <p className="text-4xl text-[#92400e] tracking-widest uppercase font-bold">Triana's Daily Love</p>
-                       <Heart className="w-24 h-24 text-[#ef4444] fill-current opacity-80" />
+                       <p className="text-4xl tracking-widest uppercase font-bold" style={{ color: '#92400e' }}>Triana's Daily Love</p>
+                       <Heart className="w-24 h-24 opacity-80" style={{ color: '#ef4444', fill: '#ef4444' }} />
                     </div>
                   </div>
                 </div>

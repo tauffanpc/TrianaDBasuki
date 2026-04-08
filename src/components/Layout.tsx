@@ -54,6 +54,44 @@ export function FloatingHearts() {
   );
 }
 
+export function HeartConfetti() {
+  const petals = React.useMemo(() => Array.from({ length: 15 }).map((_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    delay: Math.random() * 5,
+    duration: 5 + Math.random() * 5,
+    size: 20 + Math.random() * 20,
+    rotate: Math.random() * 360
+  })), []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+      {petals.map((p) => (
+        <motion.div
+          key={p.id}
+          initial={{ y: -100, x: 0, opacity: 0, rotate: p.rotate }}
+          animate={{ 
+            y: '100vh',
+            x: [0, 50, -50, 0],
+            opacity: [0, 1, 1, 0],
+            rotate: p.rotate + 360
+          }}
+          transition={{ 
+            duration: p.duration, 
+            repeat: Infinity, 
+            delay: p.delay,
+            ease: "linear"
+          }}
+          className="absolute"
+          style={{ left: p.left }}
+        >
+          <Sparkles className="text-[var(--primary-color)] fill-current" style={{ width: p.size, height: p.size }} />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 export default function Layout({ children, dayCounter, dateStr, customBg, fullWidth }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -147,7 +185,16 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
     navigate('/');
   };
 
+  // Prioritas background: 
+  // 1. Jika ada customBg dari prop (Background harian), gunakan itu
+  // 2. Jika ada background_url dari tema DB, gunakan it
+  // 3. Fallback ke gradien tema
   const currentBg = customBg || currentTheme.background_url || 'var(--bg-gradient)';
+  
+  // Deteksi jika tema aktif adalah tema spesial untuk efek tambahan
+  const isSpecialTheme = currentTheme.name?.toLowerCase().includes('anniversary') || 
+                        currentTheme.name?.toLowerCase().includes('ultah') ||
+                        currentTheme.name?.toLowerCase().includes('birthday');
   const isHome = location.pathname === '/home' || location.pathname === '/';
   const isImageUrl = !isHome && (currentBg.startsWith('http') || currentBg.startsWith('https') || currentBg.startsWith('data:'));
   const isGradient = currentBg.includes('gradient') || currentBg.startsWith('var(');
@@ -165,6 +212,7 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
     >
       <div id="custom-theme-html" className="fixed inset-0 pointer-events-none z-0 overflow-hidden" />
       <FloatingHearts />
+      {isSpecialTheme && <HeartConfetti />}
 
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/30 backdrop-blur-md border-b border-white/10 px-8 py-4 flex justify-between items-center shadow-sm optimize-gpu">
         <Link to="/home" className="flex items-center gap-4 group">

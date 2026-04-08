@@ -76,7 +76,7 @@ export const translations = {
     for_my_love: 'For My Love',
     intro_message: 'Every day is a new chapter in our love story.',
     open_message: 'Open Message',
-    welcome_back: 'Welcome Back, Darling',
+    welcome_back: 'Welcome Back, Baby!',
     diary_title: "Triana's Diary",
     curhat_placeholder: 'What would you like to share today?',
     curhat_sent: 'Memory saved in the heart.',

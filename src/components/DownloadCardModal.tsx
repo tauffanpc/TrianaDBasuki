@@ -95,7 +95,7 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-white/90 backdrop-blur-xl rounded-[2rem] p-6 max-w-4xl w-full flex flex-col md:flex-row gap-8 max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl"
+        className="relative bg-white/90 backdrop-blur-xl rounded-[2rem] p-6 max-w-4xl w-full flex flex-col md:flex-row gap-8 max-h-[85dvh] overflow-y-auto shadow-2xl"
       >
         <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full hover:bg-pink-100 text-gray-500 hover:text-pink-600 transition-colors z-20">
           <X className="w-5 h-5" />
@@ -155,7 +155,7 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                       {message?.message || 'Belum ada pesan.'}
                     </p>
                     <div className="absolute bottom-16 right-16 text-[2.5rem] font-sans italic text-pink-500 transform -rotate-12 opacity-80 decoration-wavy">
-                      Forever yours, Tauffan
+                      A beautiful memory
                     </div>
                   </div>
                   <div className="mt-24 bg-white/80 px-12 py-6 rounded-full shadow-lg border border-pink-100 flex items-center gap-4">

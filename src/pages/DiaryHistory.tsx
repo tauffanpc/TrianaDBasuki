@@ -1,0 +1,138 @@
+import React, { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { BookOpen, Clock, ArrowLeft, Search, Filter } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { getUserDiaryArchive } from '../lib/logic';
+import { UserMessage } from '../types';
+import Layout from '../components/Layout';
+import { cn } from '../lib/utils';
+
+export default function DiaryHistory() {
+  const navigate = useNavigate();
+  const [diaryHistory, setDiaryHistory] = useState<UserMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+
+  const filteredHistory = diaryHistory.filter(item => {
+    const matchesSearch = item.content.toLowerCase().includes(searchTerm.toLowerCase());
+    const itemMonth = (new Date(item.created_at).getMonth() + 1).toString();
+    const matchesMonth = selectedMonth === 'all' || itemMonth === selectedMonth;
+    return matchesSearch && matchesMonth;
+  });
+
+  useEffect(() => {
+    async function fetchHistory() {
+      try {
+        let deviceId = localStorage.getItem('device_id');
+        if (!deviceId) {
+          deviceId = Math.random().toString(36).substring(7);
+          localStorage.setItem('device_id', deviceId);
+        }
+
+        const archive = await getUserDiaryArchive(deviceId);
+        setDiaryHistory(archive);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchHistory();
+  }, []);
+
+  return (
+    <Layout dateStr={format(new Date(), 'MMMM yyyy', { locale: id })}>
+      <div className="space-y-10 py-4">
+        <div className="flex items-center justify-between">
+          <button 
+            onClick={() => navigate('/home')}
+            className="px-4 py-2 bg-white/40 backdrop-blur-md border border-white/60 text-gray-500 hover:text-pink-500 rounded-2xl transition-all flex items-center gap-2 text-xs font-bold shadow-sm"
+          >
+            <ArrowLeft className="w-4 h-4" /> Kembali
+          </button>
+        </div>
+
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-gray-900">Diary Triana</h1>
+          <p className="text-sm text-pink-600 font-medium tracking-wide">Buku harian rahasia milikku.</p>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Search className="w-4 h-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Cari curahan hati..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-white/60 backdrop-blur-md border border-white/60 focus:border-pink-300 rounded-2xl text-sm outline-none transition-all placeholder:text-gray-400 text-gray-800 shadow-sm"
+            />
+          </div>
+          <div className="relative w-full sm:w-48">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Filter className="w-4 h-4 text-gray-400" />
+            </div>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full pl-11 pr-8 py-3 bg-white/60 backdrop-blur-md border border-white/60 focus:border-pink-300 rounded-2xl text-sm outline-none transition-all text-gray-800 shadow-sm appearance-none cursor-pointer"
+            >
+              <option value="all">Semua Bulan</option>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <option key={i + 1} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM', { locale: id })}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-4 pb-8">
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                className="w-10 h-10 rounded-full bg-pink-200 shadow-xl shadow-pink-100"
+              />
+            </div>
+          ) : filteredHistory.length === 0 ? (
+            <div className="text-center py-20 opacity-50 bg-white/40 backdrop-blur-sm rounded-[2rem] border border-white/60 shadow-sm">
+              <BookOpen className="w-16 h-16 mx-auto text-pink-300 mb-4" />
+              <p className="text-sm italic text-gray-600">Tidak ada catatan yang ditemukan.</p>
+            </div>
+          ) : (
+            filteredHistory.map((item, idx) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                className={cn(
+                  "p-6 rounded-[1.5rem] transition-all duration-300 optimize-gpu bg-white/60 backdrop-blur-md border border-white/60 hover:border-pink-200 shadow-sm hover:shadow-md space-y-3"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-500">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-bold text-pink-500 uppercase tracking-widest">
+                    {format(new Date(item.created_at), 'EEEE, d MMM yyyy, HH:mm', { locale: id })}
+                  </span>
+                </div>
+                
+                <p className="text-sm text-gray-800 font-serif leading-relaxed italic pl-10 border-l-2 border-pink-100">
+                  "{item.content}"
+                </p>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </div>
+    </Layout>
+  );
+}

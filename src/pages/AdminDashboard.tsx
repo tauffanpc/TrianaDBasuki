@@ -57,6 +57,7 @@ export default function AdminDashboard() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newItemData, setNewItemData] = useState<any>({});
   const [isThemesTableMissing, setIsThemesTableMissing] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -267,52 +268,56 @@ export default function AdminDashboard() {
       label: 'Tema Romantis CSS',
       desc: 'Generate CSS custom untuk memperindah tampilan',
       prompt: `Saya punya website romantis bernama "Triana's Daily Love" dengan Tailwind CSS v4.
-Tolong buatkan Custom CSS untuk membuat tampilan lebih cantik dan romantis.
-Yang ingin saya ubah: [tulis keinginan Anda, contoh: kartu pesan lebih bulat dan ada efek glitter]
+Tolong buatkan Custom CSS untuk mempercantik "glass-card" atau memberikan efek romantis tambahan.
+Yang ingin saya ubah: [tulis keinginan Anda, contoh: kartu pesan membulat ekstrem dan font lebih elegan]
 
-Format output: hanya kode CSS murni (bukan Tailwind), siap di-paste ke field "Custom CSS".
-Gunakan !important jika perlu.
-Selector utama yang bisa dipakai: .glass-card, .text-romantic-gradient, .bg-romantic-gradient, .heart-pulse
-CSS variable yang tersedia: --primary-color, --secondary-color, --accent-color, --bg-gradient`
+Instruksi teknis untuk AI:
+- Berikan hanya kode CSS murni!
+- Gunakan !important jika Anda override class tailwind.
+- CSS variables utama: --primary-color, --secondary-color, --accent-color, --bg-gradient
+- Anda bisa menargetkan elemen .glass-card, header, p, atau menambahkan animasi keyframes.
+- Contoh selector aman: .glass-card { background: rgba(255,255,255,0.4) !important; borderRadius: 40px !important; border: 1px solid var(--accent-color); }`
     },
     {
       label: 'Custom HTML Dekoratif',
-      desc: 'Generate HTML untuk elemen hias di background',
-      prompt: `Saya ingin menambahkan elemen dekoratif HTML ke website romantis saya.
-Elemen ini akan muncul di lapisan background (z-index rendah, pointer-events: none).
-Saya ingin: [tulis keinginan Anda, contoh: efek salju merah muda, atau tulisan berjalan "I Love You"]
+      desc: 'Generate HTML untuk elemen hias di lapisan background (z-index 0)',
+      prompt: `Saya ingin menambahkan elemen dekoratif murni dari HTML dan CSS untuk website romantis saya "Triana's Daily Love".
+Elemen hias ini akan ditempatkan di lapisan bawah (z-index 0, layer background) sehingga tidak menghalangi tombol.
+Saya ingin: [tulis keinginan, contoh: efek hujan bintang kelap-kelip merah muda lembut atau bunga sakura berjatuhan lambat]
 
-Format output: kode HTML + CSS inline yang mandiri (tidak butuh file eksternal).
-Ukuran container: full screen (100vw x 100vh), position: fixed.
-Jangan gunakan javascript yang kompleks. Gunakan CSS animation saja.`
+Instruksi teknis untuk AI:
+- Gunakan 100vw dan 100vh untuk membungkusnya secara absolut/fixed.
+- CSS letakkan sejajar dalam blok tag <style>...</style> di dalam output HTML (1 file HTML utuh).
+- Jangan gunakan JavaScript yang interaktif, cukup CSS Animation saja.
+- Pastikan pointer-events: none; di bungkus terluar!`
     },
     {
-      label: 'Warna Tema Romantis',
-      desc: 'Minta rekomendasi kombinasi warna romantis',
-      prompt: `Tolong rekomendasikan kombinasi warna romantis untuk website saya.
-Suasana yang saya inginkan: [pilih: pink lembut / merah membara / ungu misterius / biru langit / emas mewah]
+      label: 'Pemilihan Palet Tema',
+      desc: 'Rekomendasi Skema Warna yang serasi untuk database',
+      prompt: `Tolong rekomendasikan skema warna romantis untuk website saya "Triana's Daily Love".
+Kesan yang saya inginkan: [pilih: hangat dan menenangkan / elegan mewah gelap / manis dan ceria]
 
-Berikan output dalam format:
-- primary_color: #xxxxxx (warna utama, untuk tombol dan teks highlight)
-- secondary_color: #xxxxxx (warna kedua, untuk aksen)
-- accent_color: #xxxxxx (warna latar lembut)
-- background_gradient: linear-gradient(...) (gradien latar halaman)
-- background_url: https://... (URL foto dari Unsplash yang cocok, format: ?auto=format&fit=crop&q=80&w=1920)`
+Tolong berikan hasilnya dalam format persis seperti ini untuk database saya:
+- primary_color: [kode hex contoh #ec4899]
+- secondary_color: [kode hex]
+- accent_color: [kode hex]
+- background_gradient: [kode linear-gradient(135deg, warna1 0%, warna2 100%)]
+- background_url: [sebaiknya link foto dari Unsplash dengan filter misal ?auto=format&fit=crop&q=80&w=1920&blend=... untuk memastikan estetika. Cari nuansa aesthetic/romance/sky/clouds]`
     },
     {
-      label: 'Tema Spesial Hari Tertentu',
-      desc: 'Generate tema untuk momen spesial',
-      prompt: `Saya ingin membuat tema khusus untuk momen spesial: [tulis momen, contoh: ulang tahun Triana, hari jadi, Valentine]
-Tanggalnya: [tulis tanggal, format: YYYY-MM-DD]
+      label: 'Tema Spesial Ekstra',
+      desc: 'Buat tema komplit (Animasi HTML + CSS) untuk Hari Spesial',
+      prompt: `Saya akan menyambut perayaan: [Momen, misal Ulang Tahun Triana / Valentine]
+Tanggal: [YYYY-MM-DD]
 
-Tolong buatkan:
-1. Nama tema yang romantis
-2. Kombinasi warna yang sesuai momen (primary, secondary, accent)
-3. background_gradient yang indah
-4. Custom CSS pendek untuk efek khusus (misal: bintang berkedip, warna emas)
-5. Custom HTML pendek untuk elemen dekoratif (misal: confetti, text berjalan)
+Bantu saya menyusun skenario elemen yang menakjubkan, tolong berikan:
+1. Kombinasi 3 Warna (Primary, Secondary, Accent HEX)
+2. Background URL Aesthetic Landscape / Abstract Romance dari Unsplash (resolusi 1080p).
+3. Background Gradient sebagai Fallback.
+4. Custom CSS untuk memodifikasi .glass-card agar terlihat mewah (ex: golden border).
+5. Custom HTML berisi animasi (ex: "Happy Birthday Triana" terbang dari bawah ke atas perlahan dengan opacity pudar).
 
-Output siap di-paste ke form Tambah Tema di Admin Dashboard.`
+Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Dashboard saya.`
     }
   ];
 
@@ -453,20 +458,32 @@ Output siap di-paste ke form Tambah Tema di Admin Dashboard.`
             {/* ── MESSAGES TAB ── */}
             {activeTab === 'messages' && (
               <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="font-bold text-gray-800">Daftar Pesan Harian</h2>
-                  <div className="flex gap-2">
-                    <button onClick={() => downloadTemplate('messages')} className="p-2 text-pink-500 hover:bg-pink-50 rounded-xl transition-all flex items-center gap-2 text-xs font-bold">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <h2 className="font-bold text-gray-800">Daftar Pesan Harian</h2>
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="px-3 py-1.5 bg-pink-50 border border-pink-100 rounded-xl text-xs font-bold text-pink-600 focus:outline-none focus:border-pink-300 transition-all cursor-pointer"
+                    >
+                      <option value="all">🗓️ Semua Bulan</option>
+                      {Array.from({ length: 12 }).map((_, i) => (
+                        <option key={i + 1} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM', { locale: id })}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2 text-xs">
+                    <button onClick={() => downloadTemplate('messages')} className="p-2 text-pink-500 hover:bg-pink-50 rounded-xl transition-all flex items-center gap-2 font-bold">
                       <Download className="w-4 h-4" /> Template
                     </button>
-                    <label className="p-2 bg-pink-500 text-white rounded-xl cursor-pointer hover:bg-pink-600 transition-all flex items-center gap-2 text-xs font-bold">
-                      <Upload className="w-4 h-4" /> Import Excel
+                    <label className="p-2 bg-pink-500 text-white rounded-xl cursor-pointer hover:bg-pink-600 transition-all flex items-center gap-2 font-bold shadow-sm shadow-pink-200">
+                      <Upload className="w-4 h-4" /> Import
                       <input type="file" className="hidden" onChange={(e) => handleImport(e, 'messages')} />
                     </label>
                   </div>
                 </div>
                 <div className="space-y-4">
-                  {messages.map((msg) => (
+                  {(selectedMonth === 'all' ? messages : messages.filter(m => m.month === parseInt(selectedMonth))).map((msg) => (
                     <div key={msg.id} className="p-5 bg-gray-50 rounded-2xl flex justify-between items-start gap-4 group border border-transparent hover:border-pink-100 transition-all">
                       {editingId === msg.id ? (
                         <div className="flex-1 space-y-2">
@@ -474,7 +491,7 @@ Output siap di-paste ke form Tambah Tema di Admin Dashboard.`
                             <input type="number" value={editData.day || ''} onChange={(e) => setEditData({...editData, day: e.target.value})} className="w-20 p-2 border rounded-lg text-xs" placeholder="Hari" />
                             <input type="number" value={editData.month || ''} onChange={(e) => setEditData({...editData, month: e.target.value})} className="w-20 p-2 border rounded-lg text-xs" placeholder="Bulan" />
                           </div>
-                          <textarea value={editData.message} onChange={(e) => setEditData({...editData, message: e.target.value})} className="w-full p-2 border rounded-lg text-xs min-h-[80px]" />
+                          <textarea value={editData.message || ''} onChange={(e) => setEditData({...editData, message: e.target.value})} className="w-full p-2 border rounded-lg text-xs min-h-[80px]" />
                           <div className="flex gap-2">
                             <button onClick={() => handleSaveEdit('messages')} className="px-3 py-1 bg-green-500 text-white rounded-lg text-[10px] font-bold">Simpan</button>
                             <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold">Batal</button>
@@ -540,11 +557,11 @@ Output siap di-paste ke form Tambah Tema di Admin Dashboard.`
                             <div key={g.id} className="p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-pink-100 transition-all">
                               {editingId === g.id ? (
                                 <div className="space-y-2">
-                                  <select value={editData.type} onChange={(e) => setEditData({...editData, type: e.target.value})} className="w-full p-2 border rounded-lg text-xs">
+                                  <select value={editData.type || 'daily'} onChange={(e) => setEditData({...editData, type: e.target.value})} className="w-full p-2 border rounded-lg text-xs">
                                     <option value="daily">Daily (Harian)</option>
                                     <option value="random">Random (Acak)</option>
                                   </select>
-                                  <input type="text" value={editData.text} onChange={(e) => setEditData({...editData, text: e.target.value})} className="w-full p-2 border rounded-lg text-xs" />
+                                  <input type="text" value={editData.text || ''} onChange={(e) => setEditData({...editData, text: e.target.value})} className="w-full p-2 border rounded-lg text-xs" />
                                   <div className="flex gap-2">
                                     <button onClick={() => handleSaveEdit('greetings')} className="px-3 py-1 bg-green-500 text-white rounded-lg text-[10px] font-bold">Simpan</button>
                                     <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold">Batal</button>
@@ -601,11 +618,15 @@ Output siap di-paste ke form Tambah Tema di Admin Dashboard.`
                     <div className="grid grid-cols-2 gap-4">
                       {MOODS.map(m => {
                         const count = moodLogs.filter(log => log.mood === m.type).length;
+                        const percent = moodLogs.length > 0 ? Math.round((count / moodLogs.length) * 100) : 0;
                         return (
-                          <div key={m.type} className="p-4 rounded-2xl bg-white/40 border border-white/60 flex flex-col items-center text-center space-y-2">
-                            <span className="text-2xl">{m.emoji}</span>
+                          <div key={m.type} className="p-4 rounded-2xl bg-white/40 border border-white/60 flex flex-col items-center text-center space-y-2 relative group cursor-pointer hover:bg-white/60 transition-all">
+                            <span className="text-2xl group-hover:scale-125 transition-transform">{m.emoji}</span>
                             <span className="text-xs font-bold text-gray-900">{m.label}</span>
                             <span className="text-2xl font-display font-bold text-pink-500">{count}</span>
+                            <div className="absolute opacity-0 group-hover:opacity-100 bottom-full mb-2 bg-gray-900 text-white text-[10px] px-3 py-1.5 rounded-lg whitespace-nowrap transition-opacity pointer-events-none">
+                              {percent}% dari total {moodLogs.length} logs
+                            </div>
                           </div>
                         );
                       })}
@@ -778,7 +799,7 @@ create policy "Admin all" on themes for all using (true);`}
                             <div className="space-y-3">
                               <div>
                                 <label className="text-[10px] font-bold text-gray-400 uppercase">Nama Tema</label>
-                                <input type="text" value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} className="w-full p-2 border rounded-lg text-xs mt-1" />
+                                <input type="text" value={editData.name || ''} onChange={(e) => setEditData({...editData, name: e.target.value})} className="w-full p-2 border rounded-lg text-xs mt-1" />
                               </div>
                               <div className="grid grid-cols-3 gap-2">
                                 {['primary_color','secondary_color','accent_color'].map((key) => (

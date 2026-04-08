@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Download, Upload, LogOut, 
   MessageSquare, Heart, Smile, 
   FileSpreadsheet, AlertCircle, CheckCircle2,
-  Inbox, LayoutDashboard, Eye, Pencil, Sparkles, Copy, Palette, X, BookOpen
+  Inbox, LayoutDashboard, Eye, Pencil, Sparkles, Copy, Palette, X, BookOpen, Clock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
@@ -408,6 +408,19 @@ export default function AdminDashboard() {
       if (delError) throw delError;
       fetchData();
       showToast('Data berhasil dihapus.');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleClearInbox = async () => {
+    if (!confirm('Yakin ingin MENGHAPUS SEMUA isi diary? Tindakan ini tidak bisa dibatalkan!')) return;
+    try {
+      const supabase = getSupabase();
+      const { error: delError } = await supabase.from('user_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      if (delError) throw delError;
+      fetchData();
+      showToast('Seluruh isi diary telah dihapus.');
     } catch (err: any) {
       showToast(err.message, 'error');
     }
@@ -972,7 +985,17 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
             {/* ── DIARY TRIANA TAB ── */}
             {activeTab === 'inbox' && (
               <div className="space-y-6">
-                <h2 className="font-bold text-gray-900">Diary Triana</h2>
+                <div className="flex justify-between items-center">
+                  <h2 className="font-bold text-gray-900">Diary Triana</h2>
+                  {userMessages.length > 0 && (
+                    <button 
+                      onClick={handleClearInbox}
+                      className="px-4 py-2 bg-red-50 text-red-500 rounded-xl text-[10px] font-bold hover:bg-red-100 transition-all flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" /> Hapus Semua
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-4">
                   {userMessages.length === 0 ? (
                     <div className="text-center py-20 text-gray-600 space-y-2">

@@ -1394,6 +1394,7 @@ create policy "Admin all" on themes for all using (true);`}
                         <>
                           <th className="px-4 py-3">Hari</th>
                           <th className="px-4 py-3">Bulan</th>
+                          <th className="px-4 py-3">Tahun</th>
                           <th className="px-4 py-3">Pesan (ID)</th>
                           <th className="px-4 py-3 border-l text-blue-500">Pesan (EN)</th>
                           <th className="px-4 py-3 border-l text-red-500">Pesan (ZH)</th>
@@ -1416,6 +1417,7 @@ create policy "Admin all" on themes for all using (true);`}
                           <>
                             <td className="px-4 py-3 font-bold whitespace-nowrap">{row.day}</td>
                             <td className="px-4 py-3">{row.month || '-'}</td>
+                            <td className="px-4 py-3">{row.year || 'Tiap Tahun'}</td>
                             <td className="px-4 py-3 min-w-[200px]">{row.message}</td>
                             <td className="px-4 py-3 min-w-[200px] border-l italic text-blue-800">{row.message_en || <span className="opacity-30">Belum ada</span>}</td>
                             <td className="px-4 py-3 min-w-[200px] border-l italic text-red-800">{row.message_zh || <span className="opacity-30">Belum ada</span>}</td>

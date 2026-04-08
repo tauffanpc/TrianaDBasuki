@@ -60,6 +60,7 @@ export default function AdminDashboard() {
   const [isThemesTableMissing, setIsThemesTableMissing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
+  const [translateProgress, setTranslateProgress] = useState({ total: 0, current: 0, previewText: '' });
   const [importPreviewData, setImportPreviewData] = useState<any[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importTable, setImportTable] = useState<string>('');
@@ -280,12 +281,21 @@ export default function AdminDashboard() {
 
   const handleTranslateAllImport = async () => {
     setIsTranslating(true);
+    setTranslateProgress({ total: importPreviewData.length, current: 0, previewText: '' });
     showToast('Sedang menerjemahkan secara massal...', 'success');
     let hasError = false;
     try {
-      // Use a for...of loop to translate sequentially and avoid rate-limits
       const translatedData = [];
+      let currentIndex = 0;
       for (const row of importPreviewData) {
+        currentIndex++;
+        const previewText = importTable === 'messages' ? row.message : row.text;
+        setTranslateProgress({ 
+          total: importPreviewData.length, 
+          current: currentIndex, 
+          previewText: previewText?.substring(0, 35) + '...' || '' 
+        });
+
         const newRow = { ...row };
         try {
           if (importTable === 'messages' && newRow.message) {
@@ -301,8 +311,15 @@ export default function AdminDashboard() {
         }
         newRow.is_active = newRow.is_active !== undefined ? newRow.is_active : true;
         translatedData.push(newRow);
+
+        // Update partial data so UI table shows translated fields row by row real-tme
+        setImportPreviewData([...translatedData, ...importPreviewData.slice(currentIndex)]);
+
+        // 4 seconds delay to prevent Google Translate rate limit (HTTP 429)
+        if (currentIndex < importPreviewData.length) {
+          await new Promise(resolve => setTimeout(resolve, 4000));
+        }
       }
-      setImportPreviewData(translatedData);
       if (hasError) {
         showToast('Translasi massal selesai dengan beberapa kegagalan.', 'error');
       } else {
@@ -312,6 +329,7 @@ export default function AdminDashboard() {
       showToast('Gagal translasi: ' + err.message, 'error');
     } finally {
       setIsTranslating(false);
+      setTranslateProgress({ total: importPreviewData.length, current: importPreviewData.length, previewText: 'Selesai' });
     }
   };
 
@@ -1401,6 +1419,28 @@ create policy "Admin all" on themes for all using (true);`}
                 </table>
               </div>
 
+              {isTranslating && (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full">
+                      Menerjemahkan baris {translateProgress.current} dari {translateProgress.total} ({Math.round((translateProgress.current / (translateProgress.total || 1)) * 100)}%)
+                    </span>
+                    <span className="text-[10px] text-gray-400 italic">
+                      "{translateProgress.previewText}"
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                    <motion.div 
+                      className="bg-indigo-500 h-2.5 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(translateProgress.current / (translateProgress.total || 1)) * 100}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2 text-center">Menunggu 4 detik per baris untuk mencegah pemblokiran API Google...</p>
+                </div>
+              )}
+
               <div className="flex gap-4 mt-auto">
                 <button
                   onClick={handleTranslateAllImport}
@@ -1421,6 +1461,7 @@ create policy "Admin all" on themes for all using (true);`}
             </motion.div>
           </div>
         )}
+
       </AnimatePresence>
 
     </Layout>

@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Download, Upload, LogOut, 
   MessageSquare, Heart, Smile, 
   FileSpreadsheet, AlertCircle, CheckCircle2,
-  Inbox, LayoutDashboard, Eye, Pencil, Sparkles, Copy, Palette
+  Inbox, LayoutDashboard, Eye, Pencil, Sparkles, Copy, Palette, X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
@@ -339,10 +339,9 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
         {/* Mobile Sidebar Toggle */}
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-6 py-3.5 bg-gradient-to-r from-pink-500/90 to-rose-400/90 backdrop-blur-md text-white rounded-full shadow-xl shadow-pink-500/30 flex items-center gap-2.5 font-bold text-sm transition-transform active:scale-95 border border-white/20"
+          className="md:hidden fixed bottom-4 right-4 z-[60] w-12 h-12 bg-gradient-to-tr from-pink-600 to-pink-400 text-white rounded-full shadow-xl shadow-pink-500/30 flex items-center justify-center transition-transform active:scale-95 border border-white/20"
         >
-          <LayoutDashboard className="w-5 h-5" />
-          <span>Menu Navigasi</span>
+          {isSidebarOpen ? <X className="w-5 h-5" /> : <LayoutDashboard className="w-5 h-5" />}
         </button>
 
         <AnimatePresence>

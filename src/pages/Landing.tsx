@@ -59,6 +59,7 @@ export default function Landing() {
   const [hasSelectedMood, setHasSelectedMood] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [background, setBackground] = useState<string | null>(null);
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
   const [diaryHistory, setDiaryHistory] = useState<UserMessage[]>([]);
   const [showArchive, setShowArchive] = useState(false);

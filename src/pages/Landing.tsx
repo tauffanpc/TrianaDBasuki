@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id, enUS, zhCN } from 'date-fns/locale';
 import { Heart, Send, Sparkles, MessageCircle, Share2, BookOpen, Clock } from 'lucide-react';
 import { getCurrentWitaDate, getDailyMessage, getGreeting, logMood, getDayCounter, getDailyBackground, sendUserMessage, getUserDiaryArchive } from '../lib/logic';
 import { Message, Greeting, UserMessage } from '../types';
@@ -10,6 +10,7 @@ import { MOODS } from '../constants';
 import Layout from '../components/Layout';
 import DownloadCardModal from '../components/DownloadCardModal';
 import { cn } from '../lib/utils';
+import { useLanguage } from '../lib/LanguageContext';
 
 function TypingText({ text, speed = 40 }: { text: string; speed?: number }) {
   const [displayedText, setDisplayedText] = useState('');
@@ -61,6 +62,7 @@ export default function Landing() {
   const [error, setError] = useState<string | null>(null);
   const [background, setBackground] = useState<string | null>(null);
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
+  const { language, t } = useLanguage();
   
   // User Curhat State
   const [userCurhat, setUserCurhat] = useState('');
@@ -165,7 +167,8 @@ export default function Landing() {
     );
   }
 
-  const dateStr = format(date, 'EEEE, d MMMM yyyy', { locale: id });
+  const currentLocale = language === 'en' ? enUS : language === 'zh' ? zhCN : id;
+  const dateStr = format(date, 'EEEE, d MMMM yyyy', { locale: currentLocale });
 
   return (
     <Layout dayCounter={dayCount} dateStr={dateStr} customBg={background || undefined}>
@@ -182,7 +185,7 @@ export default function Landing() {
             <Heart className="w-3 h-3 fill-current animate-pulse" />
           </div>
           <h2 className="text-lg md:text-xl font-display font-medium text-gray-900 leading-tight italic px-4">
-            "{greeting?.text || 'Semoga harimu menyenangkan, Sayang.'}"
+            "{language === 'en' && greeting?.text_en ? greeting.text_en : language === 'zh' && greeting?.text_zh ? greeting.text_zh : (greeting?.text || t('dear_diary'))}"
           </h2>
         </motion.div>
 
@@ -223,10 +226,10 @@ export default function Landing() {
             <div className="min-h-[140px] max-h-[450px] overflow-y-auto no-scrollbar flex items-center justify-center px-4">
               <div className="w-full">
                 <p className="text-sm md:text-base text-gray-900 leading-relaxed font-sans font-medium italic whitespace-pre-wrap text-center">
-                  {message?.message ? (
-                    <TypingText text={message.message} />
+                  {message ? (
+                    <TypingText text={language === 'en' && message.message_en ? message.message_en : language === 'zh' && message.message_zh ? message.message_zh : message.message} />
                   ) : (
-                    <TypingText text="Maaf Sayang, Tauffan belum menulis pesan untuk hari ini. Tapi ketahuilah bahwa dia selalu mencintaimu." />
+                    <TypingText text={t('no_message_today')} />
                   )}
                 </p>
               </div>
@@ -241,12 +244,12 @@ export default function Landing() {
         </motion.div>
 
         {/* Share Happiness Button */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex justify-center -mt-6 relative z-20">
+         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex justify-center -mt-6 relative z-20">
            <motion.button 
              whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(236,72,153,0.4)" }}
              whileTap={{ scale: 0.95 }}
              onClick={() => setIsDownloadOpen(true)} className="px-6 py-3 bg-white/60 backdrop-blur-xl rounded-full border border-pink-200 text-pink-600 font-bold flex items-center gap-2 transition-all shadow-[0_10px_20px_-5px_rgba(236,72,153,0.3)]">
-             <Share2 className="w-5 h-5" /> Share Happiness
+             <Share2 className="w-5 h-5" /> {t('share_happiness')}
            </motion.button>
         </motion.div>
 

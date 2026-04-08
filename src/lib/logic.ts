@@ -148,7 +148,7 @@ export async function getGreetingSettings() {
     const { data } = await supabase
       .from('greetings')
       .select('text')
-      .eq('id', 'setting_time_greeting')
+      .eq('id', '77777777-7777-7777-7777-777777777777')
       .limit(1);
 
     if (data && data.length > 0) {
@@ -163,8 +163,8 @@ export async function getGreetingSettings() {
 export async function saveGreetingSettings(settings: { isActive: boolean, days: number[] }) {
   const supabase = getSupabase();
   await supabase.from('greetings').upsert({
-    id: 'setting_time_greeting',
-    type: 'system' as any, // fallback pseudo-type
+    id: '77777777-7777-7777-7777-777777777777',
+    type: 'system' as any,
     text: JSON.stringify(settings),
     is_active: true
   });

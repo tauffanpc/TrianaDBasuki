@@ -61,7 +61,7 @@ export default function DiaryHistory() {
 
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-gray-900">{t('diary_history')}</h1>
-          <p className="text-sm text-pink-600 font-medium tracking-wide">Buku harian rahasia milikku.</p>
+          <p className="text-sm text-pink-600 font-medium tracking-wide">{t('diary_title')}</p>
         </div>
 
         {/* Filters */}

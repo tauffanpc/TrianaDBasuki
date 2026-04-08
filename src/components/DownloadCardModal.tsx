@@ -68,7 +68,7 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
       cardRef.current.style.margin = '0';
       
       const canvas = await (window as any).html2canvas(cardRef.current, {
-        scale: 2, // High resolution (Full HD+)
+        scale: 2,
         useCORS: true,
         allowTaint: false,
         backgroundColor: null,
@@ -82,31 +82,28 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         scrollY: 0,
         onclone: (clonedDoc: any) => {
           try {
-            // Temukan elemen di dokumen kloning
-            const clonedCard = clonedDoc.querySelector(`[style*="width: ${w}px"]`);
-            if (clonedCard) {
-               clonedCard.style.transform = 'none';
-               clonedCard.style.position = 'relative';
-               clonedCard.style.top = 'auto';
-               clonedCard.style.left = 'auto';
-            }
+            const styleSheets = Array.from(clonedDoc.styleSheets);
+            styleSheets.forEach((sheet: any) => {
+              try {
+                const rules = Array.from(sheet.cssRules);
+                rules.forEach((rule: any) => {
+                  if (rule.cssText && (rule.cssText.includes('oklab') || rule.cssText.includes('oklch'))) {
+                    rule.style.cssText = rule.style.cssText
+                      .replace(/oklab\([^)]+\)/g, '#ec4899') 
+                      .replace(/oklch\([^)]+\)/g, '#ec4899');
+                  }
+                });
+              } catch (e) {}
+            });
 
-            // Ultimate fallback to strip out any OKLAB/OKLCH colors injected by Tailwind V4
             const elements = clonedDoc.querySelectorAll('*');
             elements.forEach((el: any) => {
-              const compStyles = window.getComputedStyle(el);
-              const props = ['color', 'backgroundColor', 'borderColor', 'textDecorationColor', 'fill', 'stroke'];
-              props.forEach(p => {
-                const val = compStyles[p as any] || '';
-                if (val.includes('oklab') || val.includes('oklch') || val.includes('color(')) {
-                  if (p.includes('color') || p.includes('fill') || p.includes('stroke')) {
-                    el.style[p] = '#ec4899'; // Safe fallback pink
-                  }
-                  if (p === 'backgroundColor') {
-                    el.style[p] = '#ffffff'; // Safe fallback white
-                  }
-                }
-              });
+              const style = el.getAttribute('style') || '';
+              if (style.includes('oklab') || style.includes('oklch')) {
+                 el.style.cssText = el.style.cssText
+                   .replace(/oklab\([^)]+\)/g, '#ec4899')
+                   .replace(/oklch\([^)]+\)/g, '#ec4899');
+              }
             });
           } catch (e) {
             console.error('onclone error:', e);
@@ -114,7 +111,6 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         }
       });
 
-      // Kembalikan ke keadaan semula untuk Preview UI
       cardRef.current.style.transform = originalTransform;
       cardRef.current.style.position = originalPosition;
       cardRef.current.style.top = '';
@@ -122,7 +118,6 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
       cardRef.current.style.zIndex = '';
       cardRef.current.style.margin = originalMargin;
       
-      // Kembalikan scroll
       window.scrollTo(scrollX, scrollY);
 
       const image = canvas.toDataURL('image/png');
@@ -142,10 +137,6 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
 
   if (!isOpen) return null;
 
-  const w = 1080;
-  const h = resolution === '9:16' ? 1920 : 1620;
-
-  // Background style based on theme
   const getBackgroundStyle = () => {
     const bgToUse = base64Bg || currentBg;
     if (cardTheme === 'glass') {
@@ -157,7 +148,7 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
     }
     if (cardTheme === 'polaroid') {
       return {
-        backgroundColor: '#f5f5f4', // Wood/stone light tone
+        backgroundColor: '#f5f5f4',
         backgroundImage: 'radial-gradient(#e5e5e5 1px, transparent 1px)',
         backgroundSize: '20px 20px'
       };
@@ -199,9 +190,7 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
           <X className="w-5 h-5" />
         </button>
 
-        {/* PREVIEW AREA (Left) */}
         <div className="flex-1 flex flex-col items-center justify-center bg-gray-100/50 rounded-3xl p-4 overflow-hidden relative min-h-[400px]">
-          {/* Card Rendering Container - Scaled down for preview but keeps exact 1080px width for hi-res export */}
           <div className="relative transform-origin-top flex items-center justify-center" style={{ width: '100%', height: '100%' }}>
             
             <div 
@@ -209,14 +198,13 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
               style={{ 
                 width: `${w}px`, 
                 height: `${h}px`, 
-                transform: `scale(0.25)`, // Visually downscale for preview UI constraint
+                transform: `scale(0.25)`, 
                 transformOrigin: 'center center',
                 position: 'absolute',
                 ...getBackgroundStyle()
               }}
               className="overflow-hidden flex flex-col shadow-2xl relative"
             >
-              {/* === THEME 1: GLASSMORPHISM === */}
               {cardTheme === 'glass' && (
                 <div className="absolute inset-x-8 inset-y-16 flex flex-col items-center justify-center">
                   <div className="w-[85%] bg-white/30 backdrop-blur-3xl rounded-[4rem] border-4 border-white/60 p-20 flex flex-col items-center text-center shadow-2xl" style={{ boxShadow: '0 25px 50px -12px rgba(236,72,153,0.2)' }}>
@@ -234,7 +222,6 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                 </div>
               )}
 
-              {/* === THEME 2: POLAROID CLASSIC === */}
               {cardTheme === 'polaroid' && (
                 <div className="flex-1 flex flex-col items-center justify-center p-16">
                   <div className="w-[800px] p-12 pb-32 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] transform -rotate-2 relative border" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb' }}>
@@ -257,18 +244,17 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                     </div>
                   </div>
                   <div className="mt-24 px-12 py-6 rounded-full shadow-lg border flex items-center gap-4" style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: '#fce7f3' }}>
-                    <Heart className="w-8 h-8" style={{ color: '#f472b6', fill: '#f472b6' }} />
+                    <Heart className="w-8 h-8 pointer-events-none" style={{ color: '#f472b6', fill: '#f472b6' }} />
                     <p className="text-3xl font-bold tracking-[0.2em] uppercase" style={{ color: '#f472b6' }}>Triana's Daily Love • {format(new Date(), 'dd/MM/yyyy')}</p>
-                    <Heart className="w-8 h-8" style={{ color: '#f472b6', fill: '#f472b6' }} />
+                    <Heart className="w-8 h-8 pointer-events-none" style={{ color: '#f472b6', fill: '#f472b6' }} />
                   </div>
                 </div>
               )}
 
-              {/* === THEME 3: VINTAGE LOVE LETTER === */}
               {cardTheme === 'vintage' && (
                 <div className="flex-1 flex flex-col p-24 pt-32">
                   <div className="w-full h-full border-[8px] border-double rounded-3xl p-24 relative flex flex-col" style={{ borderColor: 'rgba(120,53,15,0.2)' }}>
-                    <div className="absolute top-16 right-16 opacity-30">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                        <Sparkles className="w-32 h-32" style={{ color: '#78350f' }} />
                     </div>
                     <p className="text-4xl uppercase tracking-[0.5em] font-bold mb-4" style={{ color: '#78350f' }}>SURAT HARI INI</p>

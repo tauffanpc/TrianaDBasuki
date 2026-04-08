@@ -50,7 +50,7 @@ export const translations = {
     desc_polaroid: 'Bingkai foto retro manis',
     desc_vintage: 'Kertas romantis klasik',
     logout_confirm_title: 'Mau pergi, Sayang?',
-    logout_confirm_desc: 'Kenangan kita hari ini akan selalu tersimpan di hati. Sampai jumpa lagi ya...',
+    logout_confirm_desc: 'Sampai jumpa sayang, jangan lupa kembali lagi besok ya!\nI love you!',
   },
   en: {
     language: 'English',
@@ -101,7 +101,7 @@ export const translations = {
     desc_polaroid: 'Sweet retro photo frame',
     desc_vintage: 'Classic romantic paper',
     logout_confirm_title: 'Leaving so soon, Honey?',
-    logout_confirm_desc: 'Our memories today will always stay in the heart. See you again...',
+    logout_confirm_desc: "Goodbye baby, don't forget to come back again tomorrow!\nI love you!",
   },
   zh: {
     language: '中文',
@@ -152,6 +152,6 @@ export const translations = {
     desc_polaroid: '甜美的复古相框',
     desc_vintage: '经典浪漫纸张',
     logout_confirm_title: '这么快就要走了吗，亲爱的？',
-    logout_confirm_desc: '我们今日的回忆将永远留在心中。再见...',
+    logout_confirm_desc: '再见亲爱的，明天别忘了再来哦！\n我爱你！',
   }
 };

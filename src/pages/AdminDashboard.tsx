@@ -42,6 +42,55 @@ function Toast({ message, type, onClose }: { key?: string | number; message: str
   );
 }
 
+// ─── Helper: build a safe messages payload matching the DB schema ─────────────
+//
+// Schema (dari screenshot Supabase):
+//   id uuid NOT NULL (auto)
+//   day integer NOT NULL
+//   month integer YES
+//   topic text NOT NULL          ← wajib, tidak ada default
+//   message text NOT NULL        ← wajib
+//   extension text NOT NULL      ← wajib, tidak ada default
+//   is_active boolean YES
+//   payload jsonb YES
+//   event text YES
+//   created_at timestamptz YES   ← ada default (now())
+//   year integer YES
+//   private boolean YES
+//   message_en text YES
+//   updated_at timestamp NOT NULL ← wajib
+//   message_zh text YES
+//   inserted_at timestamp NOT NULL ← wajib
+//
+// Kolom yang TIDAK boleh dikirim saat insert (auto-generated / tidak ada di schema):
+//   id, created_at
+//
+function buildMessagesPayload(raw: any, isInsert = true): Record<string, any> {
+  const now = new Date().toISOString();
+  const payload: Record<string, any> = {
+    day: parseInt(raw.day),
+    month: raw.month ? parseInt(raw.month) : null,
+    year: raw.year ? parseInt(raw.year) : null,
+    // topic & extension wajib NOT NULL — pakai string kosong sebagai fallback
+    // agar tidak melempar error null constraint
+    topic: raw.topic || '',
+    extension: raw.extension || '',
+    message: raw.message || null,
+    message_en: raw.message_en || null,
+    message_zh: raw.message_zh || null,
+    is_active: raw.is_active !== undefined ? raw.is_active : true,
+    payload: raw.payload || null,
+    event: raw.event || null,
+    private: raw.private || false,
+    updated_at: now,
+  };
+  // inserted_at hanya untuk INSERT baru, bukan UPDATE
+  if (isInsert) {
+    payload.inserted_at = now;
+  }
+  return payload;
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -132,46 +181,43 @@ export default function AdminDashboard() {
     }
   };
 
+  // ─── FIXED: handleSaveEdit ────────────────────────────────────────────────
+  // Sebelumnya: menghapus created_at lalu langsung update — tidak menyertakan
+  // kolom NOT NULL (topic, extension, updated_at, inserted_at).
+  // Sekarang: untuk tabel messages, gunakan buildMessagesPayload agar semua
+  // kolom wajib selalu terpenuhi.
   const handleSaveEdit = async (table: string) => {
     try {
       const supabase = getSupabase();
-      const dataToUpdate = { ...editData };
-      const itemId = dataToUpdate.id;
-      delete dataToUpdate.id;
-      delete dataToUpdate.created_at;
+      const itemId = editData.id;
+
+      let dataToUpdate: Record<string, any>;
 
       if (table === 'messages') {
-        if (!dataToUpdate.day || !dataToUpdate.message) throw new Error('Hari dan Pesan romantis harus diisi!');
-        dataToUpdate.day = parseInt(dataToUpdate.day);
-        if (isNaN(dataToUpdate.day)) throw new Error('Hari harus berupa angka!');
-        dataToUpdate.month = dataToUpdate.month ? parseInt(dataToUpdate.month) : null;
-        dataToUpdate.year = dataToUpdate.year ? parseInt(dataToUpdate.year) : null;
+        if (!editData.day || !editData.message) throw new Error('Hari dan Pesan romantis harus diisi!');
+        if (isNaN(parseInt(editData.day))) throw new Error('Hari harus berupa angka!');
+        // Bangun payload lengkap; isInsert=false → tidak sertakan inserted_at
+        dataToUpdate = buildMessagesPayload(editData, false);
       } else if (table === 'greetings') {
-        if (!dataToUpdate.type || !dataToUpdate.text) throw new Error('Tipe dan Teks sapaan harus diisi!');
+        if (!editData.type || !editData.text) throw new Error('Tipe dan Teks sapaan harus diisi!');
+        const { id: _id, created_at: _ca, ...rest } = editData;
+        dataToUpdate = rest;
       } else if (table === 'themes') {
-        if (!dataToUpdate.name) throw new Error('Nama tema harus diisi!');
+        if (!editData.name) throw new Error('Nama tema harus diisi!');
+        const { id: _id, created_at: _ca, ...rest } = editData;
+        dataToUpdate = rest;
         if (dataToUpdate.rotation_day) {
           dataToUpdate.rotation_day = parseInt(dataToUpdate.rotation_day);
           if (isNaN(dataToUpdate.rotation_day)) throw new Error('Hari rotasi harus berupa angka!');
         }
+      } else {
+        const { id: _id, created_at: _ca, ...rest } = editData;
+        dataToUpdate = rest;
       }
 
       const res = await supabase.from(table).update(dataToUpdate).eq('id', itemId);
-      
+
       if (res.error) {
-        // Fallback robust: Jika gagal dan ini tabel messages, coba lagi tanpa menyertakan 'year'
-        if (table === 'messages' && 'year' in dataToUpdate) {
-          const safeData = { ...dataToUpdate };
-          delete safeData.year;
-          const fallbackRes = await supabase.from(table).update(safeData).eq('id', itemId);
-          if (!fallbackRes.error) {
-            showToast('Disimpan! (Kolom Tahun di database belum aktif, sehingga diabaikan)');
-            setEditingId(null);
-            fetchData();
-            return;
-          }
-        }
-        // Jika tetap gagal atau bukan masalah year, tampilkan alasan lengkap
         showToast(`Gagal: ${res.error.message} ${res.error.details || ''}`);
         return;
       }
@@ -191,8 +237,6 @@ export default function AdminDashboard() {
     try {
       const supabase = getSupabase();
       
-      // Mengambil secara paralel tetapi kita handle error secara spesifik nantinya, 
-      // tidak menggunakan throw jika salah satu bermasalah.
       const msgsPromise = supabase.from('messages').select('*').order('month', { ascending: true }).order('day', { ascending: true });
       const greetsPromise = supabase.from('greetings').select('*');
       const moodsPromise = supabase.from('mood_messages').select('*').limit(200);
@@ -220,7 +264,6 @@ export default function AdminDashboard() {
       setGreetings(greets.data || []);
       
       const rawMoods = moods.data || [];
-      // Sort moods in JS just in case
       try {
         rawMoods.sort((a, b) => {
           if (!a.created_at || !b.created_at) return 0;
@@ -248,7 +291,10 @@ export default function AdminDashboard() {
     let data: any[] = [];
     let filename = '';
     if (type === 'messages') {
-      data = [{ day: 1, month: 4, year: 2026, message: 'Contoh pesan romantis...', is_active: true }, { day: 2, month: 4, year: null, message: 'Contoh pesan tiap tahun', is_active: true }];
+      data = [
+        { day: 1, month: 4, year: 2026, topic: '', extension: '', message: 'Contoh pesan romantis...', is_active: true },
+        { day: 2, month: 4, year: null, topic: '', extension: '', message: 'Contoh pesan tiap tahun', is_active: true }
+      ];
       filename = 'template_pesan_harian.xlsx';
     }
     const ws = XLSX.utils.json_to_sheet(data);
@@ -276,7 +322,7 @@ export default function AdminDashboard() {
       }
     };
     reader.readAsBinaryString(file);
-    e.target.value = ''; // Reset file input
+    e.target.value = '';
   };
 
   const handleTranslateAllImport = async () => {
@@ -312,10 +358,8 @@ export default function AdminDashboard() {
         newRow.is_active = newRow.is_active !== undefined ? newRow.is_active : true;
         translatedData.push(newRow);
 
-        // Update partial data so UI table shows translated fields row by row real-tme
         setImportPreviewData([...translatedData, ...importPreviewData.slice(currentIndex)]);
 
-        // 4 seconds delay to prevent Google Translate rate limit (HTTP 429)
         if (currentIndex < importPreviewData.length) {
           await new Promise(resolve => setTimeout(resolve, 4000));
         }
@@ -333,6 +377,10 @@ export default function AdminDashboard() {
     }
   };
 
+  // ─── FIXED: handleSaveImport ──────────────────────────────────────────────
+  // Sebelumnya: tidak menyertakan topic, extension, updated_at, inserted_at
+  // yang menyebabkan NOT NULL constraint violation.
+  // Sekarang: gunakan buildMessagesPayload untuk tabel messages.
   const handleSaveImport = async () => {
     try {
       const supabase = getSupabase();
@@ -341,45 +389,23 @@ export default function AdminDashboard() {
         .filter(row => importTable === 'messages' ? !!row.day : !!row.type)
         .map(row => {
           if (importTable === 'messages') {
-              return {
-                  day: parseInt(row.day),
-                  month: row.month ? parseInt(row.month) : null,
-                  year: row.year ? parseInt(row.year) : null,
-                  message: row.message || null,
-                  message_en: row.message_en || null,
-                  message_zh: row.message_zh || null,
-                  is_active: row.is_active !== undefined ? row.is_active : true
-              };
+            return buildMessagesPayload(row, true);
           } else {
-              return {
-                  type: row.type || null,
-                  text: row.text || null,
-                  text_en: row.text_en || null,
-                  text_zh: row.text_zh || null,
-                  is_active: row.is_active !== undefined ? row.is_active : true
-              };
+            return {
+              type: row.type || null,
+              text: row.text || null,
+              text_en: row.text_en || null,
+              text_zh: row.text_zh || null,
+              is_active: row.is_active !== undefined ? row.is_active : true,
+            };
           }
-      });
+        });
 
       const { error: importError } = await supabase.from(importTable).insert(sanitizedData);
       if (importError) {
-        // Fallback for year property mismatch in DB schema
-        if (importTable === 'messages') {
-          const safeData = sanitizedData.map(r => {
-             const { year, ...rest } = r;
-             return rest;
-          });
-          const fbRes = await supabase.from(importTable).insert(safeData);
-          if (!fbRes.error) {
-              showToast('Data massal berhasil disimpan! 🎉 (Tahun diabaikan)');
-              setIsImportModalOpen(false);
-              setImportPreviewData([]);
-              fetchData();
-              return;
-          }
-        }
         throw importError;
       }
+
       showToast('Data massal berhasil disimpan! 🎉');
       setIsImportModalOpen(false);
       setImportPreviewData([]);
@@ -407,27 +433,32 @@ export default function AdminDashboard() {
     setIsAddModalOpen(true);
   };
 
+  // ─── FIXED: handleSaveNew ─────────────────────────────────────────────────
+  // Sebelumnya: hanya mengirim day, month, year, message, message_en,
+  // message_zh, is_active — melewatkan topic, extension, updated_at, inserted_at
+  // yang NOT NULL → menyebabkan 400 Bad Request.
+  // Sekarang: gunakan buildMessagesPayload untuk tabel messages.
   const handleSaveNew = async () => {
     try {
       const supabase = getSupabase();
       let table = '';
-      let data = { ...newItemData, is_active: true };
+      let data: Record<string, any> = {};
 
       if (activeTab === 'messages') {
         table = 'messages';
-        if (!data.day || !data.message) throw new Error('Hari dan Pesan romantis harus diisi!');
-        data.day = parseInt(data.day);
-        if (isNaN(data.day)) throw new Error('Hari harus berupa angka!');
-        data.month = data.month ? parseInt(data.month) : null;
-        data.year = data.year ? parseInt(data.year) : null;
+        if (!newItemData.day || !newItemData.message) throw new Error('Hari dan Pesan romantis harus diisi!');
+        if (isNaN(parseInt(newItemData.day))) throw new Error('Hari harus berupa angka!');
+        data = buildMessagesPayload({ ...newItemData, is_active: true }, true);
       } else if (activeTab === 'greetings') {
         table = 'greetings';
-        if (!data.type || !data.text) throw new Error('Tipe dan Teks sapaan harus diisi!');
+        if (!newItemData.type || !newItemData.text) throw new Error('Tipe dan Teks sapaan harus diisi!');
+        data = { ...newItemData, is_active: true };
       } else if (activeTab === 'themes') {
         table = 'themes';
-        if (!data.name) throw new Error('Nama tema harus diisi!');
-        if (!data.primary_color) throw new Error('Primary color harus dipilih!');
-        if (!data.secondary_color) throw new Error('Secondary color harus dipilih!');
+        if (!newItemData.name) throw new Error('Nama tema harus diisi!');
+        if (!newItemData.primary_color) throw new Error('Primary color harus dipilih!');
+        if (!newItemData.secondary_color) throw new Error('Secondary color harus dipilih!');
+        data = { ...newItemData, is_active: true };
         if (!data.accent_color) data.accent_color = '#fdf2f8';
         data.background_gradient = data.background_gradient || 'linear-gradient(135deg, #fff1f2 0%, #fce7f3 100%)';
         data.schedule_type = data.schedule_type || 'always';
@@ -441,21 +472,6 @@ export default function AdminDashboard() {
       const res = await supabase.from(table).insert(data);
       
       if (res.error) {
-        // Fallback robust: Coba lagi tanpa tahun (year) jika terjadi penolakan skema
-        if (table === 'messages' && 'year' in data) {
-          const safeData = { ...data };
-          delete safeData.year;
-          const fallbackRes = await supabase.from(table).insert(safeData);
-          if (!fallbackRes.error) {
-            showToast('Tersimpan! (Catatan: Kolom Tahun belum aktif di Supabase)');
-            setIsAddModalOpen(false);
-            setNewItemData({});
-            fetchData();
-            return;
-          }
-        }
-        
-        // Tampilkan pesan error murni dari Supabase agar user mudah melacak
         showToast(`Gagal: ${res.error.message} ${res.error.details || ''}`);
         return;
       }
@@ -755,7 +771,6 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {/* Group by type */}
                     {['daily', 'random'].map((type) => {
                       const filtered = greetings.filter((g) => g.type === type);
                       if (filtered.length === 0) return null;
@@ -942,7 +957,6 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                   )}
                 </div>
 
-                {/* Info box: default themes always work */}
                 <div className="p-4 bg-green-50 rounded-2xl border border-green-100 flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                   <div>
@@ -1143,7 +1157,6 @@ create policy "Admin all" on themes for all using (true);`}
                   <p className="text-sm text-gray-500 mt-1">Gunakan prompt di bawah ini untuk membuat tema lebih indah dengan bantuan AI (ChatGPT / Gemini / Claude).</p>
                 </div>
 
-                {/* How it works */}
                 <div className="grid md:grid-cols-3 gap-4">
                   {[
                     { step: '1', title: 'Salin prompt', desc: 'Pilih prompt yang sesuai kebutuhan Anda, lalu salin.' },
@@ -1158,7 +1171,6 @@ create policy "Admin all" on themes for all using (true);`}
                   ))}
                 </div>
 
-                {/* Prompt cards */}
                 <div className="space-y-4">
                   {PROMPT_TEMPLATES.map((pt, i) => (
                     <div key={i} className="bg-white border border-gray-100 rounded-3xl p-6 space-y-3 shadow-sm">
@@ -1181,7 +1193,6 @@ create policy "Admin all" on themes for all using (true);`}
                   ))}
                 </div>
 
-                {/* CSS selectors reference */}
                 <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 space-y-4">
                   <h3 className="font-bold text-blue-800 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Referensi Selector CSS & Variabel</h3>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -1211,7 +1222,6 @@ create policy "Admin all" on themes for all using (true);`}
                   </div>
                 </div>
 
-                {/* Tips */}
                 <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100 space-y-2">
                   <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2"><AlertCircle className="w-4 h-4 text-orange-400" /> Tips Penting</h4>
                   <ul className="text-xs text-gray-500 space-y-2 list-disc pl-4 leading-relaxed">
@@ -1474,7 +1484,6 @@ create policy "Admin all" on themes for all using (true);`}
             </motion.div>
           </div>
         )}
-
       </AnimatePresence>
 
     </Layout>

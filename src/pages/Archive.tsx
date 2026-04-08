@@ -6,7 +6,7 @@ import { id } from 'date-fns/locale';
 import { getCurrentWitaDate } from '../lib/logic';
 import Layout from '../components/Layout';
 import { motion } from 'motion/react';
-import { Calendar, Lock, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Calendar, Lock, ChevronRight, ArrowLeft, Search, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
@@ -36,13 +36,34 @@ export default function Archive() {
     fetchArchive();
   }, []);
 
-  // Generate last 30 days
-  const archiveDays = Array.from({ length: 30 }).map((_, i) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+
+  // Generate all days from start of year to today
+  const startOfYearDate = new Date(today.getFullYear(), 0, 1);
+  const diffTime = today.getTime() - startOfYearDate.getTime();
+  const daysSinceStartOfYear = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+  const allDays = Array.from({ length: daysSinceStartOfYear }).map((_, i) => {
     const date = subDays(today, i);
     const day = date.getDate();
     const month = date.getMonth() + 1;
+    const year = date.getFullYear();
 
-    const msg = messages.find(m => m.day === day && (m.month === month || m.month === null));
+    const possibleMsgs = messages.filter(m => 
+      m.day === day && 
+      (m.month === month || m.month === null) &&
+      (m.year === year || m.year === null)
+    );
+    
+    // Sort to prioritize exact year > exact month > general
+    possibleMsgs.sort((a, b) => {
+      if (a.year !== b.year) return a.year ? -1 : 1;
+      if (a.month !== b.month) return a.month ? -1 : 1;
+      return 0;
+    });
+    
+    const msg = possibleMsgs[0];
     const isToday = isSameDay(date, today);
     const isFuture = isAfter(date, today);
 
@@ -52,6 +73,15 @@ export default function Archive() {
       isToday,
       isFuture
     };
+  });
+
+  const filteredArchive = allDays.filter(item => {
+    const defaultMsg = "Aku mencintaimu lebih dari kemarin.";
+    const textToSearch = item.message?.message || defaultMsg;
+    const matchesSearch = textToSearch.toLowerCase().includes(searchTerm.toLowerCase());
+    const itemMonth = (item.date.getMonth() + 1).toString();
+    const matchesMonth = selectedMonth === 'all' || itemMonth === selectedMonth;
+    return matchesSearch && matchesMonth;
   });
 
   return (
@@ -71,8 +101,45 @@ export default function Archive() {
           <p className="text-sm text-pink-600 font-medium tracking-wide">Kenangan yang telah kita lewati</p>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Search className="w-4 h-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Cari pesan harian..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-white/60 backdrop-blur-md border border-white/60 focus:border-pink-300 rounded-2xl text-sm outline-none transition-all placeholder:text-gray-400 text-gray-800 shadow-sm"
+            />
+          </div>
+          <div className="relative w-full sm:w-48">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Filter className="w-4 h-4 text-gray-400" />
+            </div>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full pl-11 pr-8 py-3 bg-white/60 backdrop-blur-md border border-white/60 focus:border-pink-300 rounded-2xl text-sm outline-none transition-all text-gray-800 shadow-sm appearance-none cursor-pointer"
+            >
+              <option value="all">Semua Bulan</option>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <option key={i + 1} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM', { locale: id })}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="space-y-4">
-          {archiveDays.map((item, idx) => (
+          {filteredArchive.length === 0 ? (
+            <div className="text-center py-20 opacity-50 bg-white/40 backdrop-blur-sm rounded-[2rem] border border-white/60 shadow-sm">
+              <Calendar className="w-16 h-16 mx-auto text-pink-300 mb-4" />
+              <p className="text-sm italic text-gray-600">Tidak ada pesan yang ditemukan.</p>
+            </div>
+          ) : (
+            filteredArchive.map((item, idx) => (
             <motion.div
               key={idx}
               initial={{ opacity: 0, y: 15 }}
@@ -124,7 +191,7 @@ export default function Archive() {
                 </div>
               )}
             </motion.div>
-          ))}
+          )))}
         </div>
       </div>
     </Layout>

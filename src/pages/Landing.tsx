@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Heart, Send, Sparkles, MessageCircle, Share2, BookOpen, Clock, Menu, X, Archive as ArchiveIcon, Home } from 'lucide-react';
+import { Heart, Send, Sparkles, MessageCircle, Share2, BookOpen, Clock } from 'lucide-react';
 import { getCurrentWitaDate, getDailyMessage, getGreeting, logMood, getDayCounter, getDailyBackground, sendUserMessage, getUserDiaryArchive } from '../lib/logic';
 import { Message, Greeting, UserMessage } from '../types';
 import { MOODS } from '../constants';
@@ -61,9 +61,6 @@ export default function Landing() {
   const [error, setError] = useState<string | null>(null);
   const [background, setBackground] = useState<string | null>(null);
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
-  const [diaryHistory, setDiaryHistory] = useState<UserMessage[]>([]);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDiaryHistoryOpen, setIsDiaryHistoryOpen] = useState(false);
   
   // User Curhat State
   const [userCurhat, setUserCurhat] = useState('');
@@ -110,7 +107,7 @@ export default function Landing() {
         setMessage(msg);
         setGreeting(greet);
         if (bg) setBackground(bg.url);
-        setDiaryHistory(archive);
+        if (bg) setBackground(bg.url);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -146,8 +143,7 @@ export default function Landing() {
       setSentSuccess(true);
       setUserCurhat('');
       
-      // Update rekam jejak archive dengan data yang baru terkirim secara optimis
-      setDiaryHistory([{ id: Date.now().toString(), content: userCurhat, created_at: new Date().toISOString(), device_id: deviceId, is_read: false }, ...diaryHistory]);
+      setUserCurhat('');
 
       setTimeout(() => setSentSuccess(false), 3000);
     } catch (err: any) {
@@ -371,127 +367,6 @@ export default function Landing() {
           </div>
         </motion.div>
       </div>
-
-      {/* Floating Action Menu */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none">
-        
-        <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-2 pointer-events-auto items-end mb-2"
-            >
-              <button 
-                onClick={() => { setIsMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-pink-50 transition-all border border-pink-100 group"
-              >
-                <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">Beranda</span>
-                <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 group-hover:scale-110 transition-transform">
-                  <Home className="w-4 h-4" />
-                </div>
-              </button>
-              
-              <button 
-                onClick={() => { setIsMenuOpen(false); window.location.href = '/archive'; }}
-                className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-pink-50 transition-all border border-pink-100 group"
-              >
-                <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">Arsip Pesan</span>
-                <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 group-hover:scale-110 transition-transform">
-                  <ArchiveIcon className="w-4 h-4" />
-                </div>
-              </button>
-
-              <button 
-                onClick={() => { setIsMenuOpen(false); setIsDiaryHistoryOpen(true); }}
-                className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-pink-50 transition-all border border-pink-100 group"
-              >
-                <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">Riwayat Diary</span>
-                <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 group-hover:scale-110 transition-transform">
-                  <BookOpen className="w-4 h-4" />
-                </div>
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <motion.button 
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="pointer-events-auto px-5 py-3.5 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-full shadow-xl shadow-pink-200/50 flex items-center gap-2 border border-white/20"
-        >
-          {isMenuOpen ? (
-            <X className="w-5 h-5" />
-          ) : (
-            <>
-              <span className="font-bold text-sm tracking-wide">Menu</span>
-              <Sparkles className="w-4 h-4 opacity-80" />
-            </>
-          )}
-        </motion.button>
-      </div>
-      <div className="pb-8" />
-
-      {/* Diary History Modal */}
-      <AnimatePresence>
-        {isDiaryHistoryOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="w-full max-w-lg max-h-[80vh] bg-white rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden border border-pink-100"
-            >
-              <div className="p-6 border-b border-pink-50 flex justify-between items-center bg-pink-50/30">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center text-pink-500">
-                    <BookOpen className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-800 text-lg">Riwayat Diary</h3>
-                    <p className="text-[10px] text-pink-500 font-medium uppercase tracking-widest">Catatan Rahasia Triana</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setIsDiaryHistoryOpen(false)}
-                  className="p-2 bg-gray-100 text-gray-500 rounded-full hover:bg-pink-100 hover:text-pink-500 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white/50">
-                {diaryHistory.length === 0 ? (
-                  <div className="text-center py-10 opacity-50">
-                    <BookOpen className="w-12 h-12 mx-auto text-pink-200 mb-2" />
-                    <p className="text-sm italic text-gray-500">Buku harian ini masih kosong...</p>
-                  </div>
-                ) : (
-                  diaryHistory.map((item) => (
-                    <div key={item.id} className="p-5 bg-pink-50/40 rounded-2xl border border-pink-50 space-y-2">
-                      <span className="text-[10px] font-bold text-pink-400 uppercase tracking-widest flex items-center gap-1.5">
-                        <Clock className="w-3 h-3" />
-                        {format(new Date(item.created_at), 'd MMM yyyy, HH:mm')}
-                      </span>
-                      <p className="text-sm italic text-gray-800 font-serif leading-relaxed">
-                        "{item.content}"
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </Layout>
   );
 }

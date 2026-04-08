@@ -337,15 +337,26 @@ export default function AdminDashboard() {
     try {
       const supabase = getSupabase();
       
-      // Ensure specific numbers for numbers
       const sanitizedData = importPreviewData.map(row => {
-          const r = { ...row };
           if (importTable === 'messages') {
-              r.day = parseInt(r.day);
-              if (r.month) r.month = parseInt(r.month);
-              if (r.year) r.year = parseInt(r.year);
+              return {
+                  day: parseInt(row.day),
+                  month: row.month ? parseInt(row.month) : null,
+                  year: row.year ? parseInt(row.year) : null,
+                  message: row.message || null,
+                  message_en: row.message_en || null,
+                  message_zh: row.message_zh || null,
+                  is_active: row.is_active !== undefined ? row.is_active : true
+              };
+          } else {
+              return {
+                  type: row.type || null,
+                  text: row.text || null,
+                  text_en: row.text_en || null,
+                  text_zh: row.text_zh || null,
+                  is_active: row.is_active !== undefined ? row.is_active : true
+              };
           }
-          return r;
       });
 
       const { error: importError } = await supabase.from(importTable).insert(sanitizedData);

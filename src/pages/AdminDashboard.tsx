@@ -337,7 +337,9 @@ export default function AdminDashboard() {
     try {
       const supabase = getSupabase();
       
-      const sanitizedData = importPreviewData.map(row => {
+      const sanitizedData = importPreviewData
+        .filter(row => importTable === 'messages' ? !!row.day : !!row.type)
+        .map(row => {
           if (importTable === 'messages') {
               return {
                   day: parseInt(row.day),

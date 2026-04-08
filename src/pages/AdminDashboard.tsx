@@ -57,6 +57,7 @@ export default function AdminDashboard() {
   const [editData, setEditData] = useState<any>({});
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newItemData, setNewItemData] = useState<any>({});
+  const [greetingSettings, setGreetingSettings] = useState({ isActive: false, days: [0, 1, 2, 3, 4, 5, 6] });
   const [isThemesTableMissing, setIsThemesTableMissing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
@@ -217,7 +218,14 @@ export default function AdminDashboard() {
       }
 
       setMessages(msgs.data || []);
-      setGreetings(greets.data || []);
+      
+      const allGreets = greets.data || [];
+      setGreetings(allGreets.filter(g => g.id !== 'setting_time_greeting'));
+      
+      const settingsRow = allGreets.find(g => g.id === 'setting_time_greeting');
+      if (settingsRow && settingsRow.text) {
+        try { setGreetingSettings(JSON.parse(settingsRow.text)); } catch(e) {}
+      }
       
       const rawMoods = moods.data || [];
       // Sort moods in JS just in case
@@ -749,6 +757,65 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                   <button onClick={addItem} className="px-4 py-2 bg-pink-500 text-white rounded-xl text-xs font-bold hover:bg-pink-600 transition-all flex items-center gap-2">
                     <Plus className="w-4 h-4" /> Tambah Sapaan
                   </button>
+                </div>
+
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-3xl border border-indigo-100 shadow-sm relative overflow-hidden">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10 w-full">
+                    <div>
+                      <h3 className="font-bold text-indigo-900 flex items-center gap-2">
+                        <Clock className="w-4 h-4" /> Sapaan Waktu WITA (Otomatis)
+                      </h3>
+                      <p className="text-[10px] text-indigo-600/80 mt-1">Sistem ini akan mendeteksi waktu (Pagi/Siang/Sore/Malam) lalu menggabungkannya dengan sapaan utama (Contoh: "Selamat Pagi, [Sapaan Utama]").</p>
+                    </div>
+                    <label className="flex items-center cursor-pointer flex-shrink-0">
+                      <div className="relative">
+                        <input type="checkbox" className="sr-only" checked={greetingSettings.isActive} onChange={async (e) => {
+                          const newSettings = { ...greetingSettings, isActive: e.target.checked };
+                          setGreetingSettings(newSettings);
+                          try {
+                            const { saveGreetingSettings } = await import('../lib/logic');
+                            await saveGreetingSettings(newSettings);
+                            showToast('Pengaturan Sapaan Disimpan');
+                          } catch(err) {}
+                        }} />
+                        <div className={`block w-10 h-6 rounded-full transition-colors ${greetingSettings.isActive ? 'bg-indigo-500' : 'bg-gray-300'}`}></div>
+                        <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${greetingSettings.isActive ? 'transform translate-x-4' : ''}`}></div>
+                      </div>
+                      <div className="ml-3 text-xs font-bold text-indigo-800 uppercase tracking-wider">
+                        {greetingSettings.isActive ? 'Aktif' : 'Nonaktif'}
+                      </div>
+                    </label>
+                  </div>
+                  
+                  {greetingSettings.isActive && (
+                    <div className="mt-4 pt-4 border-t border-indigo-100/50">
+                      <p className="text-[10px] font-bold text-indigo-800 uppercase mb-2">Tampilkan pada Hari:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map((dayName, idx) => (
+                          <label key={idx} className={`cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${greetingSettings.days.includes(idx) ? 'bg-indigo-500 text-white border-indigo-600' : 'bg-white border-indigo-200 text-indigo-400 hover:border-indigo-400'}`}>
+                            <input 
+                              type="checkbox" 
+                              className="hidden" 
+                              checked={greetingSettings.days.includes(idx)} 
+                              onChange={async (e) => {
+                                const newDays = e.target.checked ? [...greetingSettings.days, idx] : greetingSettings.days.filter(d => d !== idx);
+                                const newSettings = { ...greetingSettings, days: newDays };
+                                setGreetingSettings(newSettings);
+                                try {
+                                  const { saveGreetingSettings } = await import('../lib/logic');
+                                  await saveGreetingSettings(newSettings);
+                                } catch(err) {}
+                              }} 
+                            />
+                            {dayName}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute right-0 top-0 opacity-5 pointer-events-none -translate-y-1/4 translate-x-1/4">
+                    <Clock className="w-48 h-48" />
+                  </div>
                 </div>
 
                 {greetings.length === 0 ? (

@@ -35,7 +35,7 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
       const canvas = await (window as any).html2canvas(cardRef.current, {
         scale: 2, // High resolution
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false,
         backgroundColor: null
       });
 
@@ -142,7 +142,7 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                   <div className="w-[800px] bg-white p-12 pb-32 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] transform -rotate-2 relative border border-gray-200">
                     <div className="w-full aspect-[4/3] bg-pink-100 mb-16 flex items-center justify-center relative overflow-hidden shadow-inner">
                       {currentBg.startsWith('http') ? (
-                         <img src={currentBg} className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply" alt="bg" />
+                         <img src={currentBg} crossOrigin="anonymous" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply" alt="bg" />
                       ) : (
                          <div className="absolute inset-0" style={{ background: currentBg, opacity: 0.3 }} />
                       )}

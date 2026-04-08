@@ -3,11 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Heart, Send, Sparkles, MessageCircle } from 'lucide-react';
+import { Heart, Send, Sparkles, MessageCircle, Share2 } from 'lucide-react';
 import { getCurrentWitaDate, getDailyMessage, getGreeting, logMood, getDayCounter, getDailyBackground, sendUserMessage } from '../lib/logic';
 import { Message, Greeting } from '../types';
 import { MOODS } from '../constants';
 import Layout from '../components/Layout';
+import DownloadCardModal from '../components/DownloadCardModal';
 import { cn } from '../lib/utils';
 
 function TypingText({ text, speed = 40 }: { text: string; speed?: number }) {
@@ -59,6 +60,7 @@ export default function Landing() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [background, setBackground] = useState<string | null>(null);
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false);
   
   // User Curhat State
   const [userCurhat, setUserCurhat] = useState('');
@@ -227,6 +229,21 @@ export default function Landing() {
           </div>
         </motion.div>
 
+        {/* Share Happiness Button */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex justify-center -mt-6 relative z-20">
+           <button onClick={() => setIsDownloadOpen(true)} className="px-6 py-3 bg-white/60 backdrop-blur-xl rounded-full border border-pink-200 text-pink-600 font-bold flex items-center gap-2 hover:bg-pink-100 hover:scale-105 transition-all shadow-[0_10px_20px_-5px_rgba(236,72,153,0.3)]">
+             <Share2 className="w-5 h-5" /> Share Happiness
+           </button>
+        </motion.div>
+
+        <DownloadCardModal 
+           isOpen={isDownloadOpen} 
+           onClose={() => setIsDownloadOpen(false)} 
+           message={message} 
+           greeting={greeting} 
+           currentBg={background || 'var(--bg-gradient)'} 
+        />
+
         {/* Mood Selection */}
         <AnimatePresence>
           {!hasSelectedMood && (
@@ -324,7 +341,7 @@ export default function Landing() {
                 exit={{ opacity: 0 }}
                 className="text-[10px] text-green-500 font-bold text-center uppercase tracking-widest"
               >
-                Pesan terkirim! Tauffan akan segera membacanya ❤️
+                Pesan terkirim! ❤️
               </motion.p>
             )}
           </AnimatePresence>

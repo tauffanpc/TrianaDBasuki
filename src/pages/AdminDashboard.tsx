@@ -105,10 +105,24 @@ export default function AdminDashboard() {
       }
 
       const { error: updateError } = await supabase.from(table).update(dataToUpdate).eq('id', itemId);
-      if (updateError) throw updateError;
+      
+      if (updateError) {
+        if (updateError.code === '42703') {
+          // Fallback if 'year' column doesn't exist
+          const safeData = { ...dataToUpdate };
+          delete safeData['year'];
+          const { error: fallbackError } = await supabase.from(table).update(safeData).eq('id', itemId);
+          if (fallbackError) throw fallbackError;
+          showToast('Disimpan, namun fitur Tahun belum aktif (SQL belum dijalankan)');
+        } else {
+          throw updateError;
+        }
+      } else {
+        showToast('Perubahan berhasil disimpan! ✨');
+      }
+
       setEditingId(null);
       fetchData();
-      showToast('Perubahan berhasil disimpan! ✨');
     } catch (err: any) {
       showToast(err.message, 'error');
     }
@@ -125,7 +139,7 @@ export default function AdminDashboard() {
       // tidak menggunakan throw jika salah satu bermasalah.
       const msgsPromise = supabase.from('messages').select('*').order('month', { ascending: true }).order('day', { ascending: true });
       const greetsPromise = supabase.from('greetings').select('*');
-      const moodsPromise = supabase.from('mood_messages').select('*').order('created_at', { ascending: false }).limit(200);
+      const moodsPromise = supabase.from('mood_messages').select('*').limit(200);
       const inboxPromise = supabase.from('user_messages').select('*').order('created_at', { ascending: false });
       const themesPromise = supabase.from('themes').select('*').order('created_at', { ascending: true });
 
@@ -148,7 +162,17 @@ export default function AdminDashboard() {
 
       setMessages(msgs.data || []);
       setGreetings(greets.data || []);
-      setMoodLogs(moods.data || []);
+      
+      const rawMoods = moods.data || [];
+      // Sort moods in JS just in case
+      try {
+        rawMoods.sort((a, b) => {
+          if (!a.created_at || !b.created_at) return 0;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+      } catch (e) {}
+      setMoodLogs(rawMoods);
+      
       setUserMessages(inbox.data || []);
       setThemes(themesData.data || []);
     } catch (err: any) {
@@ -250,11 +274,23 @@ export default function AdminDashboard() {
 
       if (!table) return;
       const { error: addError } = await supabase.from(table).insert(data);
-      if (addError) throw addError;
+      if (addError) {
+        if (addError.code === '42703') {
+          // Fallback if 'year' column doesn't exist
+          const safeData = { ...data };
+          delete safeData['year'];
+          const { error: fallbackError } = await supabase.from(table).insert(safeData);
+          if (fallbackError) throw fallbackError;
+          showToast('Data baru tersimpan! Namun kolom Tahun belum ditesupabase (diabaikan)');
+        } else {
+          throw addError;
+        }
+      } else {
+        showToast('Data baru berhasil ditambahkan! ✨');
+      }
       setIsAddModalOpen(false);
       setNewItemData({});
       fetchData();
-      showToast('Data baru berhasil ditambahkan! ✨');
     } catch (err: any) {
       showToast(err.message, 'error');
     }
@@ -641,7 +677,7 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                       const data = moodLogs.map(log => ({
                         Mood: MOODS.find(m => m.type === log.mood)?.label || log.mood,
                         Emoji: MOODS.find(m => m.type === log.mood)?.emoji || '',
-                        Waktu: format(new Date(log.created_at), 'dd MMM yyyy HH:mm'),
+                        Waktu: log.created_at ? format(new Date(log.created_at), 'dd MMM yyyy HH:mm') : 'Waktu tidak diketahui',
                         DeviceID: log.device_id
                       }));
                       const ws = XLSX.utils.json_to_sheet(data);
@@ -664,7 +700,7 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                             </div>
                             <div>
                               <p className="text-sm font-bold text-gray-900">{MOODS.find(m => m.type === log.mood)?.label}</p>
-                              <p className="text-[10px] text-gray-500">{format(new Date(log.created_at), 'dd MMMM yyyy, HH:mm', { locale: id })}</p>
+                              <p className="text-[10px] text-gray-500">{log.created_at ? format(new Date(log.created_at), 'dd MMMM yyyy, HH:mm', { locale: id }) : 'Waktu tidak diketahui'}</p>
                             </div>
                           </div>
                           <div className="text-[10px] font-mono text-gray-300">{log.device_id.substring(0, 8)}...</div>

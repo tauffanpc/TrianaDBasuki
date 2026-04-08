@@ -256,7 +256,7 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
               <span className="opacity-50">{dateStr}</span>
               {dayCounter !== undefined && (
                 <span className="bg-[var(--primary-color)]/80 text-white px-2 py-0.5 rounded-full mt-1 shadow-sm">
-                  Day {dayCounter}
+                  {t('day_counter', { count: dayCounter })}
                 </span>
               )}
             </div>

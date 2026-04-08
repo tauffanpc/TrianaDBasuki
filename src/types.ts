@@ -2,6 +2,7 @@ export interface Message {
   id: string;
   day: number;
   month: number | null;
+  year?: number | null;
   message: string;
   is_active: boolean;
   created_at: string;

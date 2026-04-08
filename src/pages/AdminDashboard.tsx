@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 import { Message, Greeting, MoodMessage, UserMessage, Theme, MoodLog } from '../types';
 import { MOODS, DEFAULT_THEMES } from '../constants';
+import { translateText } from '../lib/translationHelper';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
 
@@ -58,6 +59,7 @@ export default function AdminDashboard() {
   const [newItemData, setNewItemData] = useState<any>({});
   const [isThemesTableMissing, setIsThemesTableMissing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [isTranslating, setIsTranslating] = useState<boolean>(false);
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -78,6 +80,52 @@ export default function AdminDashboard() {
   const handleEdit = (item: any) => {
     setEditingId(item.id);
     setEditData(item);
+  };
+
+  const handleMagicTranslateNew = async () => {
+    if (activeTab === 'messages' && !newItemData.message) return showToast('Isi pesan bahasa Indonesia terlebih dahulu', 'error');
+    if (activeTab === 'greetings' && !newItemData.text) return showToast('Isi sapaan bahasa Indonesia terlebih dahulu', 'error');
+
+    setIsTranslating(true);
+    try {
+      if (activeTab === 'messages') {
+        const en = await translateText(newItemData.message, 'en');
+        const zh = await translateText(newItemData.message, 'zh-CN');
+        setNewItemData((prev: any) => ({ ...prev, message_en: en, message_zh: zh }));
+      } else if (activeTab === 'greetings') {
+        const en = await translateText(newItemData.text, 'en');
+        const zh = await translateText(newItemData.text, 'zh-CN');
+        setNewItemData((prev: any) => ({ ...prev, text_en: en, text_zh: zh }));
+      }
+      showToast('Magic Translate Berhasil! ✨', 'success');
+    } catch(e) {
+      showToast('Translasi gagal, hapus kolom bahasa asing dan coba lagi', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleMagicTranslateEdit = async () => {
+    if (activeTab === 'messages' && !editData.message) return showToast('Isi pesan bahasa Indonesia terlebih dahulu', 'error');
+    if (activeTab === 'greetings' && !editData.text) return showToast('Isi sapaan bahasa Indonesia terlebih dahulu', 'error');
+
+    setIsTranslating(true);
+    try {
+      if (activeTab === 'messages') {
+        const en = await translateText(editData.message, 'en');
+        const zh = await translateText(editData.message, 'zh-CN');
+        setEditData((prev: any) => ({ ...prev, message_en: en, message_zh: zh }));
+      } else if (activeTab === 'greetings') {
+        const en = await translateText(editData.text, 'en');
+        const zh = await translateText(editData.text, 'zh-CN');
+        setEditData((prev: any) => ({ ...prev, text_en: en, text_zh: zh }));
+      }
+      showToast('Magic Translate Berhasil! ✨', 'success');
+    } catch(e) {
+      showToast('Translasi gagal, hapus kolom bahasa asing dan coba lagi', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const handleSaveEdit = async (table: string) => {
@@ -540,8 +588,15 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                             <input type="number" value={editData.month || ''} onChange={(e) => setEditData({...editData, month: e.target.value})} className="w-20 p-2 border rounded-lg text-xs" placeholder="Bulan" />
                             <input type="number" value={editData.year || ''} onChange={(e) => setEditData({...editData, year: e.target.value})} className="w-24 p-2 border rounded-lg text-xs" placeholder="Tahun" />
                           </div>
-                          <textarea value={editData.message || ''} onChange={(e) => setEditData({...editData, message: e.target.value})} className="w-full p-2 border rounded-lg text-xs min-h-[80px]" />
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 py-1">
+                            <button onClick={handleMagicTranslateEdit} disabled={isTranslating} className="flex flex-1 items-center justify-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold hover:bg-indigo-100 disabled:opacity-50 border border-indigo-100">
+                              <Sparkles className="w-3 h-3" /> {isTranslating ? 'Translating...' : 'Magic Translate 🪄'}
+                            </button>
+                          </div>
+                          <textarea value={editData.message || ''} onChange={(e) => setEditData({...editData, message: e.target.value})} className="w-full p-2 border rounded-lg text-xs min-h-[60px]" placeholder="ID (Indonesia)" />
+                          <textarea value={editData.message_en || ''} onChange={(e) => setEditData({...editData, message_en: e.target.value})} className="w-full p-2 border rounded-lg text-xs min-h-[60px]" placeholder="EN (English) otomatis" />
+                          <textarea value={editData.message_zh || ''} onChange={(e) => setEditData({...editData, message_zh: e.target.value})} className="w-full p-2 border rounded-lg text-xs min-h-[60px]" placeholder="ZH (Chinese) otomatis" />
+                          <div className="flex gap-2 pt-1">
                             <button onClick={() => handleSaveEdit('messages')} className="px-3 py-1 bg-green-500 text-white rounded-lg text-[10px] font-bold">Simpan</button>
                             <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold">Batal</button>
                           </div>
@@ -606,12 +661,19 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                             <div key={g.id} className="p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-pink-100 transition-all">
                               {editingId === g.id ? (
                                 <div className="space-y-2">
-                                  <select value={editData.type || 'daily'} onChange={(e) => setEditData({...editData, type: e.target.value})} className="w-full p-2 border rounded-lg text-xs">
-                                    <option value="daily">Daily (Harian)</option>
-                                    <option value="random">Random (Acak)</option>
-                                  </select>
-                                  <input type="text" value={editData.text || ''} onChange={(e) => setEditData({...editData, text: e.target.value})} className="w-full p-2 border rounded-lg text-xs" />
-                                  <div className="flex gap-2">
+                                  <div className="flex justify-between items-center gap-2 mb-1">
+                                    <select value={editData.type || 'daily'} onChange={(e) => setEditData({...editData, type: e.target.value})} className="w-1/2 p-2 border rounded-lg text-xs bg-white">
+                                      <option value="daily">Daily (Harian)</option>
+                                      <option value="random">Random (Acak)</option>
+                                    </select>
+                                    <button onClick={handleMagicTranslateEdit} disabled={isTranslating} className="flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold hover:bg-indigo-100 disabled:opacity-50 border border-indigo-100">
+                                      <Sparkles className="w-3 h-3" /> {isTranslating ? 'Translating...' : 'Translate 🪄'}
+                                    </button>
+                                  </div>
+                                  <input type="text" value={editData.text || ''} onChange={(e) => setEditData({...editData, text: e.target.value})} className="w-full p-2 border rounded-lg text-xs" placeholder="ID (Indonesia)" />
+                                  <input type="text" value={editData.text_en || ''} onChange={(e) => setEditData({...editData, text_en: e.target.value})} className="w-full p-2 border rounded-lg text-xs" placeholder="EN (English) otomatis" />
+                                  <input type="text" value={editData.text_zh || ''} onChange={(e) => setEditData({...editData, text_zh: e.target.value})} className="w-full p-2 border rounded-lg text-xs" placeholder="ZH (Chinese) otomatis" />
+                                  <div className="flex gap-2 pt-1">
                                     <button onClick={() => handleSaveEdit('greetings')} className="px-3 py-1 bg-green-500 text-white rounded-lg text-[10px] font-bold">Simpan</button>
                                     <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold">Batal</button>
                                   </div>
@@ -1081,9 +1143,16 @@ create policy "Admin all" on themes for all using (true);`}
                         <input type="number" onChange={(e) => setNewItemData({...newItemData, year: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="Contoh: 2026" />
                       </div>
                     </div>
-                    <div>
+                    <div className="flex justify-between items-end">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pesan Romantis *</label>
-                      <textarea onChange={(e) => setNewItemData({...newItemData, message: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200 min-h-[120px] resize-none" placeholder="Tuliskan pesan cintamu di sini..." />
+                      <button onClick={handleMagicTranslateNew} disabled={isTranslating} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold hover:bg-indigo-100 disabled:opacity-50 border border-indigo-100">
+                        <Sparkles className="w-3 h-3" /> {isTranslating ? 'Translating...' : 'Translate 🪄'}
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      <textarea value={newItemData.message || ''} onChange={(e) => setNewItemData({...newItemData, message: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200 min-h-[80px] resize-none" placeholder="ID (Indonesia) - Masukkan pesan utama di sini..." />
+                      <textarea value={newItemData.message_en || ''} onChange={(e) => setNewItemData({...newItemData, message_en: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200 min-h-[60px] resize-none" placeholder="EN (English) otomatis" />
+                      <textarea value={newItemData.message_zh || ''} onChange={(e) => setNewItemData({...newItemData, message_zh: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200 min-h-[60px] resize-none" placeholder="ZH (Chinese) otomatis" />
                     </div>
                   </>
                 )}
@@ -1098,9 +1167,16 @@ create policy "Admin all" on themes for all using (true);`}
                         <option value="random">Random — dipilih acak dari semua random</option>
                       </select>
                     </div>
-                    <div>
+                    <div className="flex justify-between items-end mt-2">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Teks Sapaan *</label>
-                      <input type="text" onChange={(e) => setNewItemData({...newItemData, text: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="Contoh: Selamat pagi, Sayangku..." />
+                      <button onClick={handleMagicTranslateNew} disabled={isTranslating} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold hover:bg-indigo-100 disabled:opacity-50 border border-indigo-100">
+                        <Sparkles className="w-3 h-3" /> {isTranslating ? 'Translating...' : 'Translate 🪄'}
+                      </button>
+                    </div>
+                    <div className="space-y-2 pb-1">
+                      <input type="text" value={newItemData.text || ''} onChange={(e) => setNewItemData({...newItemData, text: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200" placeholder="ID (Indonesia)" />
+                      <input type="text" value={newItemData.text_en || ''} onChange={(e) => setNewItemData({...newItemData, text_en: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200" placeholder="EN (English) otomatis" />
+                      <input type="text" value={newItemData.text_zh || ''} onChange={(e) => setNewItemData({...newItemData, text_zh: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200" placeholder="ZH (Chinese) otomatis" />
                     </div>
                   </>
                 )}

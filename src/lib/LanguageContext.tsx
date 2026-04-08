@@ -10,12 +10,17 @@ interface LanguageContextProps {
 const LanguageContext = createContext<LanguageContextProps | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Set default to 'en' (English) as requested by user
   const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
-    const saved = localStorage.getItem('app_language') as Language;
-    if (saved && ['en', 'id', 'zh'].includes(saved)) {
-      setLanguageState(saved);
+    try {
+      const saved = localStorage.getItem('app_language') as Language;
+      if (saved && ['en', 'id', 'zh'].includes(saved)) {
+        setLanguageState(saved);
+      }
+    } catch (e) {
+      console.error('Error loading language from local storage', e);
     }
   }, []);
 
@@ -25,7 +30,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const t = (key: keyof typeof translations['en']) => {
-    return translations[language][key] || translations['en'][key];
+    const translationSet = translations[language] || translations['en'];
+    return translationSet[key] || translations['en'][key] || key;
   };
 
   return (
@@ -37,6 +43,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
-  if (!context) throw new Error('useLanguage must be used within LanguageProvider');
+  if (!context) {
+    throw new Error('useLanguage must be used within LanguageProvider');
+  }
   return context;
 };

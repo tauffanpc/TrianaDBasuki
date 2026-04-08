@@ -104,23 +104,27 @@ export default function AdminDashboard() {
         }
       }
 
-      const { error: updateError } = await supabase.from(table).update(dataToUpdate).eq('id', itemId);
+      const res = await supabase.from(table).update(dataToUpdate).eq('id', itemId);
       
-      if (updateError) {
-        if (updateError.code === '42703') {
-          // Fallback if 'year' column doesn't exist
+      if (res.error) {
+        // Fallback robust: Jika gagal dan ini tabel messages, coba lagi tanpa menyertakan 'year'
+        if (table === 'messages' && 'year' in dataToUpdate) {
           const safeData = { ...dataToUpdate };
-          delete safeData['year'];
-          const { error: fallbackError } = await supabase.from(table).update(safeData).eq('id', itemId);
-          if (fallbackError) throw fallbackError;
-          showToast('Disimpan, namun fitur Tahun belum aktif (SQL belum dijalankan)');
-        } else {
-          throw updateError;
+          delete safeData.year;
+          const fallbackRes = await supabase.from(table).update(safeData).eq('id', itemId);
+          if (!fallbackRes.error) {
+            showToast('Disimpan! (Kolom Tahun di database belum aktif, sehingga diabaikan)');
+            setEditingId(null);
+            fetchData();
+            return;
+          }
         }
-      } else {
-        showToast('Perubahan berhasil disimpan! ✨');
+        // Jika tetap gagal atau bukan masalah year, tampilkan alasan lengkap
+        showToast(`Gagal: ${res.error.message} ${res.error.details || ''}`);
+        return;
       }
 
+      showToast('Perubahan berhasil disimpan! ✨');
       setEditingId(null);
       fetchData();
     } catch (err: any) {
@@ -273,21 +277,29 @@ export default function AdminDashboard() {
       }
 
       if (!table) return;
-      const { error: addError } = await supabase.from(table).insert(data);
-      if (addError) {
-        if (addError.code === '42703') {
-          // Fallback if 'year' column doesn't exist
+      const res = await supabase.from(table).insert(data);
+      
+      if (res.error) {
+        // Fallback robust: Coba lagi tanpa tahun (year) jika terjadi penolakan skema
+        if (table === 'messages' && 'year' in data) {
           const safeData = { ...data };
-          delete safeData['year'];
-          const { error: fallbackError } = await supabase.from(table).insert(safeData);
-          if (fallbackError) throw fallbackError;
-          showToast('Data baru tersimpan! Namun kolom Tahun belum ditesupabase (diabaikan)');
-        } else {
-          throw addError;
+          delete safeData.year;
+          const fallbackRes = await supabase.from(table).insert(safeData);
+          if (!fallbackRes.error) {
+            showToast('Tersimpan! (Catatan: Kolom Tahun belum aktif di Supabase)');
+            setIsAddModalOpen(false);
+            setNewItemData({});
+            fetchData();
+            return;
+          }
         }
-      } else {
-        showToast('Data baru berhasil ditambahkan! ✨');
+        
+        // Tampilkan pesan error murni dari Supabase agar user mudah melacak
+        showToast(`Gagal: ${res.error.message} ${res.error.details || ''}`);
+        return;
       }
+
+      showToast('Data baru berhasil ditambahkan! ✨');
       setIsAddModalOpen(false);
       setNewItemData({});
       fetchData();

@@ -78,7 +78,7 @@ export async function getGreeting() {
 export async function logMood(mood: string, deviceId: string) {
   try {
     const supabase = getSupabase();
-    const { error } = await supabase.from('mood_logs').insert({
+    const { error } = await supabase.from('mood_messages').insert({
       mood,
       device_id: deviceId
     });

@@ -381,9 +381,9 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-lg font-bold text-gray-800">Mau pergi, Sayang?</h3>
+                    <h3 className="text-lg font-bold text-gray-800">{t('logout_confirm_title')}</h3>
                     <p className="text-xs text-gray-400 leading-relaxed">
-                      Kenangan kita hari ini akan selalu tersimpan di hati. Sampai jumpa lagi ya...
+                      {t('logout_confirm_desc')}
                     </p>
                   </div>
                   <div className="flex gap-3">
@@ -391,13 +391,13 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
                       onClick={() => setIsLogoutModalOpen(false)}
                       className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all"
                     >
-                      Batal
+                      {t('cancel')}
                     </button>
                     <button 
                       onClick={handleUserLogout}
                       className="flex-1 py-3 bg-[var(--primary-color)] text-white rounded-xl font-bold text-xs shadow-lg shadow-pink-100 hover:opacity-90 transition-all"
                     >
-                      Ya, Keluar
+                      {t('logout')}
                     </button>
                   </div>
                 </motion.div>

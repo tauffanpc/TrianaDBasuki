@@ -332,7 +332,7 @@ export default function Landing() {
             "Buku harian rahasia milikku. Di sini aku bisa menulis keluh kesah, harapan, dan pikiranku tanpa takut dihakimi. Tempat aman yang hanya aku sendiri yang menyimpan, tak akan ada siapapun yang membacanya..."
           </p>
 
-          {!showArchive ? (
+          {activeTab === 'beranda' ? (
             <div className="space-y-4">
               <div className="relative">
                 <textarea

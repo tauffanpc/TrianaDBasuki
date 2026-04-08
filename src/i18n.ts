@@ -21,10 +21,7 @@ export const translations = {
     no_results: 'Tidak ada kenangan.',
     magic_translate: 'Terjemahkan 🪄',
     translating: 'Menerjemahkan...',
-    for_my_love: 'Untuk Cintaku',
-    intro_message: 'Setiap detik yang terlewati adalah bukti betapa berartinya kamu bagiku.',
-    open_message: 'Buka Pesan Cintaku',
-    welcome_back: 'Selamat Datang Kembali Sayangku...'
+    back: 'Kembali',
   },
   en: {
     language: 'English',
@@ -46,10 +43,7 @@ export const translations = {
     no_results: 'No memories found.',
     magic_translate: 'Translate 🪄',
     translating: 'Translating...',
-    for_my_love: 'For My Love',
-    intro_message: 'Every second that passes is proof of how much you mean to me.',
-    open_message: 'Open My Love Message',
-    welcome_back: 'Welcome Back My Love...'
+    back: 'Back',
   },
   zh: {
     language: '中文',
@@ -71,9 +65,6 @@ export const translations = {
     no_results: '没有回忆。',
     magic_translate: '翻译 🪄',
     translating: '翻译中...',
-    for_my_love: '献给我的爱人',
-    intro_message: '流逝的每一秒都证明了你对我有多重要。',
-    open_message: '打开我的情书',
-    welcome_back: '欢迎回来，我的爱人……'
+    back: '返回',
   }
 };

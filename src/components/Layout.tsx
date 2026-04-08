@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Heart, LogOut, X, Sparkles } from 'lucide-react';
+import { Heart, LogOut, X, Sparkles, Menu, BookOpen, Archive as ArchiveIcon, Home } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { AnimatePresence } from 'motion/react';
@@ -97,6 +97,7 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
   const navigate = useNavigate();
   const isAdmin = location.pathname.startsWith('/admin');
   const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [currentTheme, setCurrentTheme] = React.useState<Partial<Theme>>(getDefaultThemeForToday());
 
   React.useEffect(() => {
@@ -277,35 +278,77 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
 
       {!isAdmin && (
         <>
-          <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] max-w-md bg-white/30 backdrop-blur-lg border border-white/20 px-8 py-3.5 flex justify-around items-center z-50 rounded-[2rem] shadow-xl shadow-pink-100/20 optimize-gpu">
-            <Link
-              to="/home"
-              className={cn(
-                "flex flex-col items-center gap-1 transition-all duration-300",
-                location.pathname === '/home' ? "text-[var(--primary-color)] scale-105" : "text-gray-400 hover:text-[var(--secondary-color)]"
+          {/* Floating Action Menu */}
+          <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none">
+            
+            <AnimatePresence>
+              {isMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col gap-2 pointer-events-auto items-end mb-2"
+                >
+                  <button 
+                    onClick={() => { setIsMenuOpen(false); navigate('/home'); }}
+                    className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-pink-50 transition-all border border-pink-100 group"
+                  >
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">Beranda</span>
+                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 group-hover:scale-110 transition-transform">
+                      <Home className="w-4 h-4" />
+                    </div>
+                  </button>
+                  
+                  <button 
+                    onClick={() => { setIsMenuOpen(false); navigate('/archive'); }}
+                    className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-pink-50 transition-all border border-pink-100 group"
+                  >
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">Arsip Pesan</span>
+                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 group-hover:scale-110 transition-transform">
+                      <ArchiveIcon className="w-4 h-4" />
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { setIsMenuOpen(false); navigate('/diary-history'); }}
+                    className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-pink-50 transition-all border border-pink-100 group"
+                  >
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">Riwayat Diary</span>
+                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 group-hover:scale-110 transition-transform">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { setIsMenuOpen(false); setIsLogoutModalOpen(true); }}
+                    className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-red-50 transition-all border border-red-100 group"
+                  >
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-red-500 transition-colors">Keluar</span>
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+                      <LogOut className="w-4 h-4" />
+                    </div>
+                  </button>
+                </motion.div>
               )}
+            </AnimatePresence>
+
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="pointer-events-auto px-5 py-3.5 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-full shadow-xl shadow-pink-200/50 flex items-center gap-2 border border-white/20"
             >
-              <Heart className={cn("w-5 h-5", location.pathname === '/home' ? "fill-current" : "")} />
-              <span className="text-[9px] font-bold uppercase tracking-widest">Beranda</span>
-            </Link>
-            <Link
-              to="/archive"
-              className={cn(
-                "flex flex-col items-center gap-1 transition-all duration-300",
-                location.pathname === '/archive' ? "text-[var(--primary-color)] scale-105" : "text-gray-400 hover:text-[var(--secondary-color)]"
+              {isMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <>
+                  <span className="font-bold text-sm tracking-wide">Menu</span>
+                  <Sparkles className="w-4 h-4 opacity-80" />
+                </>
               )}
-            >
-              <X className={cn("w-5 h-5", location.pathname === '/archive' ? "rotate-45" : "")} />
-              <span className="text-[9px] font-bold uppercase tracking-widest">Arsip</span>
-            </Link>
-            <button
-              onClick={() => setIsLogoutModalOpen(true)}
-              className="flex flex-col items-center gap-1 text-gray-400 hover:text-red-400 transition-all duration-300"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="text-[9px] font-bold uppercase tracking-widest">Keluar</span>
-            </button>
-          </nav>
+            </motion.button>
+          </div>
 
           <AnimatePresence>
             {isLogoutModalOpen && (

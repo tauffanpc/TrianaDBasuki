@@ -3,12 +3,31 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Sparkles, Flame, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FloatingHearts } from '../components/Layout';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useLanguage } from '../lib/LanguageContext';
+import { getGreeting } from '../lib/logic';
+import { Greeting } from '../types';
 
 export default function Intro() {
   const navigate = useNavigate();
   const [showPopup, setShowPopup] = useState(false);
-  const { language, setLanguage, t } = useLanguage();
+  const [greeting, setGreeting] = useState<Greeting | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { language, t } = useLanguage();
+
+  React.useEffect(() => {
+    async function fetchGreeting() {
+      try {
+        const greet = await getGreeting();
+        setGreeting(greet);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchGreeting();
+  }, []);
 
   const handleEnter = () => {
     // Trigger day counter by setting first visit if not exists
@@ -31,18 +50,7 @@ export default function Intro() {
 
       {/* Language Switcher */}
       <div className="absolute top-6 right-6 z-50">
-        <button 
-          onClick={() => {
-            const nextLang = language === 'id' ? 'en' : language === 'en' ? 'zh' : 'id';
-            setLanguage(nextLang);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-full shadow-xl hover:bg-pink-600 transition-all border-2 border-white group"
-        >
-          <Globe className="w-4 h-4 font-bold group-hover:rotate-12 transition-transform" />
-          <span className="text-[10px] font-bold uppercase tracking-widest px-1">
-            {language === 'en' ? 'English (EN)' : language === 'id' ? 'Bahasa (ID)' : '中文 (ZH)'}
-          </span>
-        </button>
+        <LanguageSwitcher />
       </div>
 
       <motion.div
@@ -96,9 +104,19 @@ export default function Intro() {
             transition={{ delay: 1.2, duration: 0.8 }}
             className="relative px-4"
           >
-            <p className="text-gray-700 text-base max-w-[280px] mx-auto leading-relaxed font-medium italic">
-              {t('intro_message')}
-            </p>
+            {loading ? (
+              <div className="flex justify-center space-x-2 h-[24px]">
+                <div className="w-2 h-2 bg-pink-300 rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-pink-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <div className="w-2 h-2 bg-pink-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+              </div>
+            ) : (
+              <p className="text-gray-700 text-base max-w-[280px] mx-auto leading-relaxed font-medium italic">
+                {greeting 
+                  ? (language === 'en' && greeting.text_en ? greeting.text_en : language === 'zh' && greeting.text_zh ? greeting.text_zh : greeting.text)
+                  : t('intro_message')}
+              </p>
+            )}
           </motion.div>
         </div>
 

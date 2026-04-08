@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Download, Upload, LogOut, 
   MessageSquare, Heart, Smile, 
   FileSpreadsheet, AlertCircle, CheckCircle2,
-  Inbox, LayoutDashboard, Eye, Pencil, Sparkles, Copy, Palette, X
+  Inbox, LayoutDashboard, Eye, Pencil, Sparkles, Copy, Palette, X, BookOpen
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
@@ -372,7 +372,7 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                 { id: 'greetings', label: 'Sapaan', icon: Heart },
                 { id: 'mood_stats', label: 'Statistik Mood', icon: Smile },
                 { id: 'themes', label: 'Tema & BG', icon: Palette },
-                { id: 'inbox', label: 'Inbox Pesan', icon: Inbox },
+                { id: 'inbox', label: 'Diary Triana', icon: BookOpen },
                 { id: 'guide', label: 'Panduan & Prompt', icon: Sparkles },
               ].map((tab) => (
                 <button
@@ -424,7 +424,7 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                 {activeTab === 'greetings' && <Heart className="w-6 h-6" />}
                 {activeTab === 'mood_stats' && <Smile className="w-6 h-6" />}
                 {activeTab === 'themes' && <Palette className="w-6 h-6" />}
-                {activeTab === 'inbox' && <Inbox className="w-6 h-6" />}
+                {activeTab === 'inbox' && <BookOpen className="w-6 h-6" />}
                 {activeTab === 'guide' && <Sparkles className="w-6 h-6" />}
               </div>
               <div className="hidden sm:block">
@@ -673,15 +673,15 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
               </div>
             )}
 
-            {/* ── INBOX TAB ── */}
+            {/* ── DIARY TRIANA TAB ── */}
             {activeTab === 'inbox' && (
               <div className="space-y-6">
-                <h2 className="font-bold text-gray-900">Pesan dari Triana</h2>
+                <h2 className="font-bold text-gray-900">Diary Triana</h2>
                 <div className="space-y-4">
                   {userMessages.length === 0 ? (
                     <div className="text-center py-20 text-gray-600 space-y-2">
-                      <Inbox className="w-12 h-12 mx-auto opacity-20" />
-                      <p>Belum ada pesan masuk...</p>
+                      <BookOpen className="w-12 h-12 mx-auto opacity-20" />
+                      <p>Belum ada catatan diary masuk...</p>
                     </div>
                   ) : (
                     userMessages.map((msg) => (

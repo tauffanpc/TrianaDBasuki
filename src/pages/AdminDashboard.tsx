@@ -336,14 +336,6 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
       </AnimatePresence>
 
       <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] gap-6 relative">
-        {/* Mobile Sidebar Toggle */}
-        <button 
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="md:hidden fixed bottom-4 right-4 z-[60] w-12 h-12 bg-gradient-to-tr from-pink-600 to-pink-400 text-white rounded-full shadow-xl shadow-pink-500/30 flex items-center justify-center transition-transform active:scale-95 border border-white/20"
-        >
-          {isSidebarOpen ? <X className="w-5 h-5" /> : <LayoutDashboard className="w-5 h-5" />}
-        </button>
-
         <AnimatePresence>
           {isSidebarOpen && (
             <motion.div
@@ -418,10 +410,16 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
 
         {/* Main Content */}
         <div className="flex-1 space-y-8 min-w-0">
-          {/* Header Desktop */}
-          <div className="hidden md:flex justify-between items-center bg-white/60 backdrop-blur-md p-6 rounded-[2rem] border border-white/40 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-pink-50 rounded-2xl flex items-center justify-center text-pink-500">
+          {/* Header Mobile & Desktop */}
+          <div className="flex justify-between items-center bg-white/60 backdrop-blur-md p-4 md:p-6 rounded-[2rem] border border-white/40 shadow-sm gap-2">
+            <div className="flex items-center gap-3 md:gap-4">
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="md:hidden p-3 bg-pink-50 text-pink-600 hover:bg-pink-100 rounded-xl transition-colors shadow-sm"
+              >
+                <LayoutDashboard className="w-5 h-5" />
+              </button>
+              <div className="hidden md:flex w-12 h-12 bg-pink-50 rounded-2xl items-center justify-center text-pink-500">
                 {activeTab === 'messages' && <MessageSquare className="w-6 h-6" />}
                 {activeTab === 'greetings' && <Heart className="w-6 h-6" />}
                 {activeTab === 'mood_stats' && <Smile className="w-6 h-6" />}
@@ -429,17 +427,17 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                 {activeTab === 'inbox' && <Inbox className="w-6 h-6" />}
                 {activeTab === 'guide' && <Sparkles className="w-6 h-6" />}
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-gray-900 capitalize">{activeTab.replace('_', ' ')}</h1>
-                <p className="text-xs text-gray-600">Kelola konten bagian {activeTab}</p>
+              <div className="hidden sm:block">
+                <h1 className="text-sm md:text-lg font-bold text-gray-900 capitalize">{activeTab.replace('_', ' ')}</h1>
+                <p className="text-[10px] md:text-xs text-gray-600">Kelola konten bagian {activeTab}</p>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 md:gap-3 flex-shrink-0">
               <button
                 onClick={() => window.open('/home?preview_date=' + new Date().toISOString().split('T')[0], '_blank')}
-                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all flex items-center gap-2 text-xs font-bold"
+                className="px-3 md:px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all flex items-center gap-2 text-xs font-bold"
               >
-                <Eye className="w-4 h-4" /> Preview App
+                <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Preview</span>
               </button>
               {activeTab !== 'inbox' && activeTab !== 'guide' && activeTab !== 'mood_stats' && (
                 <button 

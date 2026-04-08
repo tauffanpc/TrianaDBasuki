@@ -15,7 +15,7 @@ interface Props {
 
 export default function DownloadCardModal({ isOpen, onClose, message, greeting, currentBg }: Props) {
   const [resolution, setResolution] = useState<'2:3' | '9:16'>('2:3');
-  const [cardTheme, setCardTheme] = useState<'glass' | 'polaroid' | 'vintage'>('glass');
+  const [cardTheme, setCardTheme] = useState<'glass' | 'polaroid' | 'vintage' | 'landing' | 'elegant'>('glass');
   const [isDownloading, setIsDownloading] = useState(false);
   const [base64Bg, setBase64Bg] = useState<string | null>(null);
   
@@ -122,6 +122,19 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         backgroundColor: '#fef3c7',
         backgroundImage: 'linear-gradient(rgba(120, 53, 15, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(120, 53, 15, 0.05) 1px, transparent 1px)',
         backgroundSize: '40px 40px'
+      };
+    }
+    if (cardTheme === 'landing') {
+      return {
+        backgroundImage: bgToUse.startsWith('http') || bgToUse.startsWith('data:') ? `url(${bgToUse})` : bgToUse,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      };
+    }
+    if (cardTheme === 'elegant') {
+      return {
+        backgroundColor: '#0f172a',
+        backgroundImage: 'radial-gradient(ellipse at top, #1e293b, transparent)',
       };
     }
     return {};
@@ -234,6 +247,67 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                 </div>
               )}
 
+              {/* === THEME 4: LANDING LAYOUT === */}
+              {cardTheme === 'landing' && (
+                <div className="absolute inset-x-8 inset-y-16 flex flex-col items-center justify-center">
+                  <div className="w-[85%] backdrop-blur-3xl rounded-[3rem] border-2 p-16 flex flex-col items-center text-center shadow-xl relative" style={{ backgroundColor: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.8)', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)' }}>
+                    <div className="absolute -top-10 -right-10 opacity-[0.05]">
+                      <Heart className="w-48 h-48" style={{ color: '#ec4899', fill: '#ec4899' }} />
+                    </div>
+                    
+                    <div className="flex items-center justify-center gap-6 mb-16">
+                      <div className="h-[2px] w-16" style={{ backgroundImage: 'linear-gradient(to right, transparent, #ec4899)' }} />
+                      <div className="w-20 h-20 rounded-3xl flex items-center justify-center transform -rotate-6 shadow-lg shadow-pink-200" style={{ backgroundImage: 'linear-gradient(to bottom right, #ec4899, #fb7185)' }}>
+                        <Heart className="w-10 h-10 animate-pulse" style={{ color: '#ffffff', fill: '#ffffff' }} />
+                      </div>
+                      <div className="h-[2px] w-16" style={{ backgroundImage: 'linear-gradient(to left, transparent, #ec4899)' }} />
+                    </div>
+
+                    <h2 className="text-[3.5rem] leading-tight font-display italic mb-10 px-8" style={{ color: '#111827' }}>
+                      "{greeting?.text}"
+                    </h2>
+                    
+                    <div className="px-12 w-full max-h-[500px] overflow-hidden flex justify-center">
+                      <p className="text-[2.25rem] leading-[1.8em] font-sans font-medium" style={{ color: '#1f2937' }}>
+                        {message?.message || 'Belum ada pesan hari ini.'}
+                      </p>
+                    </div>
+
+                    <div className="flex justify-center items-center gap-4 mt-16 opacity-40">
+                      <Sparkles className="w-6 h-6" style={{ color: '#f472b6' }} />
+                      <div className="h-[2px] w-48" style={{ backgroundImage: 'linear-gradient(to right, transparent, #fbcfe8, transparent)' }} />
+                      <Sparkles className="w-6 h-6" style={{ color: '#f472b6' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === THEME 5: MINIMALIST ELEGANT (Dark) === */}
+              {cardTheme === 'elegant' && (
+                <div className="flex-1 flex flex-col items-center justify-center p-20">
+                  <div className="w-full h-full border p-20 flex flex-col relative" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                    <div className="absolute top-12 left-12">
+                      <p className="text-[1.5rem] tracking-[0.4em] uppercase" style={{ color: '#cbd5e1' }}>Momen Spesial</p>
+                      <p className="text-[3rem] font-serif italic mt-2" style={{ color: '#e2e8f0' }}>{format(new Date(), 'dd.MM.yy')}</p>
+                    </div>
+
+                    <div className="flex-1 flex flex-col justify-center items-start mt-20 pl-16 border-l shadow-[inset_1px_0_0_0_rgba(255,255,255,0.1)]" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                      <h2 className="text-[4.5rem] leading-tight font-serif italic mb-12 drop-shadow-lg" style={{ color: '#f8fafc' }}>
+                        "{greeting?.text}"
+                      </h2>
+                      <p className="text-[2.5rem] leading-[2em] font-sans font-light w-[90%]" style={{ color: '#cbd5e1' }}>
+                        {message?.message || 'Belum ada pesan.'}
+                      </p>
+                    </div>
+
+                    <div className="mt-auto flex justify-between items-end border-t pt-12" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                      <p className="text-[1.5rem] tracking-[0.5em] uppercase font-light" style={{ color: '#64748b' }}>Triana's Daily Love</p>
+                      <Sparkles className="w-12 h-12" style={{ color: '#e2e8f0' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
           
@@ -276,9 +350,11 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
               <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block mt-6">2. Pilih Tema Kartu</label>
               <div className="space-y-2">
                 {[
-                  { id: 'glass', name: 'Glassmorphism', desc: 'Bersih, elegan, modern' },
+                  { id: 'landing', name: 'Original UI', desc: 'Layout sama seperti Beranda web' },
+                  { id: 'elegant', name: 'Midnight Elegance', desc: 'Gelap, Estensial, Mewah & Elegan' },
+                  { id: 'glass', name: 'Glassmorphism', desc: 'Bersih, efek kaca tembus pandang' },
                   { id: 'polaroid', name: 'Classic Polaroid', desc: 'Bingkai foto retro manis' },
-                  { id: 'vintage', name: 'Vintage Love Letter', desc: 'Kertas romantis klasik' }
+                  { id: 'vintage', name: 'Vintage Love Letter', desc: 'Kertas romantis klasik' },
                 ].map((t) => (
                   <button
                     key={t.id}

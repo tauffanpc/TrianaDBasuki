@@ -326,6 +326,7 @@ export default function Landing() {
               </div>
               <h4 className="font-bold text-xs uppercase tracking-[0.15em] text-pink-600 italic">Diary Triana</h4>
             </div>
+          </div>
           
           <p className="text-xs text-gray-700 leading-relaxed italic opacity-80 backdrop-blur-sm bg-white/30 p-4 rounded-xl border border-white/40">
             "Buku harian rahasia milikku. Di sini aku bisa menulis keluh kesah, harapan, dan pikiranku tanpa takut dihakimi. Tempat aman yang hanya aku sendiri yang menyimpan, tak akan ada siapapun yang membacanya..."

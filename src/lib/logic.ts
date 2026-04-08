@@ -127,3 +127,20 @@ export function getDayCounter(firstVisitDate: string) {
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   return diffDays + 1;
 }
+
+export async function getUserDiaryArchive(deviceId: string) {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('user_messages')
+      .select('*')
+      .eq('device_id', deviceId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Failed to get user diary archive:', err);
+    return [];
+  }
+}

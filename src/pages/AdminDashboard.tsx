@@ -220,9 +220,9 @@ export default function AdminDashboard() {
       setMessages(msgs.data || []);
       
       const allGreets = greets.data || [];
-      setGreetings(allGreets.filter(g => g.id !== 'setting_time_greeting'));
+      setGreetings(allGreets.filter(g => g.id !== '77777777-7777-7777-7777-777777777777'));
       
-      const settingsRow = allGreets.find(g => g.id === 'setting_time_greeting');
+      const settingsRow = allGreets.find(g => g.id === '77777777-7777-7777-7777-777777777777');
       if (settingsRow && settingsRow.text) {
         try { setGreetingSettings(JSON.parse(settingsRow.text)); } catch(e) {}
       }
@@ -1005,7 +1005,7 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                   ) : (
                     userMessages.map((msg) => (
                       <div key={msg.id} className="p-6 bg-pink-50 rounded-3xl space-y-3 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                           <Heart className="w-12 h-12 text-pink-500 fill-current" />
                         </div>
                         <p className="text-gray-800 font-medium leading-relaxed italic">"{msg.content}"</p>

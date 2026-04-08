@@ -51,6 +51,11 @@ export const translations = {
     desc_vintage: 'Kertas romantis klasik',
     logout_confirm_title: 'Mau pergi, Sayang?',
     logout_confirm_desc: 'Sampai jumpa sayang, jangan lupa kembali lagi besok ya!\nI love you!',
+    day_counter: 'Hari ke-{{count}}',
+    morning: 'Selamat Pagi',
+    noon: 'Selamat Siang',
+    afternoon: 'Selamat Sore',
+    night: 'Selamat Malam',
   },
   en: {
     language: 'English',
@@ -102,6 +107,11 @@ export const translations = {
     desc_vintage: 'Classic romantic paper',
     logout_confirm_title: 'Leaving so soon, Honey?',
     logout_confirm_desc: "Goodbye baby, don't forget to come back again tomorrow!\nI love you!",
+    day_counter: 'Day {{count}}',
+    morning: 'Good Morning',
+    noon: 'Good Afternoon',
+    afternoon: 'Good Evening',
+    night: 'Good Night',
   },
   zh: {
     language: '中文',
@@ -153,5 +163,10 @@ export const translations = {
     desc_vintage: '经典浪漫纸张',
     logout_confirm_title: '这么快就要走了吗，亲爱的？',
     logout_confirm_desc: '再见亲爱的，明天别忘了再来哦！\n我爱你！',
+    day_counter: '第 {{count}} 天',
+    morning: '早上好',
+    noon: '中午好',
+    afternoon: '下午好',
+    night: '晚上好',
   }
 };

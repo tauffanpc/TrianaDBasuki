@@ -94,43 +94,43 @@ export default function Archive() {
         <div className="flex items-center justify-between">
           <button 
             onClick={() => navigate('/home')}
-            className="px-4 py-2 bg-white/40 backdrop-blur-md border border-white/60 text-gray-500 hover:text-pink-500 rounded-2xl transition-all flex items-center gap-2 text-xs font-bold shadow-sm"
+            className="px-5 py-2.5 bg-white/10 backdrop-blur-xl border border-white/20 text-white hover:bg-white/20 rounded-2xl transition-all flex items-center gap-2 text-xs font-bold shadow-lg shadow-black/20"
           >
-            <ArrowLeft className="w-4 h-4" /> {t('back')}
+            <ArrowLeft className="w-4 h-4 text-pink-300" /> {t('back')}
           </button>
         </div>
 
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">{t('archive')}</h1>
-          <p className="text-sm text-pink-600 font-medium tracking-wide">{t('archive_subtitle')}</p>
+        <div className="text-center space-y-3">
+          <h1 className="text-4xl md:text-5xl font-bold text-white drop-shadow-[0_0_25px_rgba(255,182,193,0.3)]">{t('archive')}</h1>
+          <p className="text-sm text-pink-200 font-medium tracking-[0.2em] uppercase opacity-80">{t('archive_subtitle')}</p>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 text-gray-400" />
+              <Search className="w-4 h-4 text-white/40" />
             </div>
             <input
               type="text"
               placeholder={t('search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-white/60 backdrop-blur-md border border-white/60 focus:border-pink-300 rounded-2xl text-sm outline-none transition-all placeholder:text-gray-400 text-gray-800 shadow-sm"
+              className="w-full pl-11 pr-4 py-4 bg-black/20 backdrop-blur-xl border border-white/10 focus:border-pink-400/50 rounded-2xl text-sm outline-none transition-all placeholder:text-white/30 text-white shadow-inner"
             />
           </div>
-          <div className="relative w-full sm:w-48">
+          <div className="relative w-full sm:w-56">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <Filter className="w-4 h-4 text-gray-400" />
+              <Filter className="w-4 h-4 text-white/40" />
             </div>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full pl-11 pr-8 py-3 bg-white/60 backdrop-blur-md border border-white/60 focus:border-pink-300 rounded-2xl text-sm outline-none transition-all text-gray-800 shadow-sm appearance-none cursor-pointer"
+              className="w-full pl-11 pr-8 py-4 bg-black/20 backdrop-blur-xl border border-white/10 focus:border-pink-400/50 rounded-2xl text-sm outline-none transition-all text-white shadow-inner appearance-none cursor-pointer"
             >
-              <option value="all">{t('all_months')}</option>
+              <option value="all" className="bg-gray-900">{t('all_months')}</option>
               {Array.from({ length: 12 }).map((_, i) => (
-                <option key={i + 1} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM', { locale: currentLocale })}</option>
+                <option key={i + 1} value={i + 1} className="bg-gray-900">{format(new Date(2024, i, 1), 'MMMM', { locale: currentLocale })}</option>
               ))}
             </select>
           </div>

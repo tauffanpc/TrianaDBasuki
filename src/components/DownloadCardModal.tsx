@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Download, Image as ImageIcon, Sparkles, Heart } from 'lucide-react';
 import { Message, Greeting } from '../types';
 import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id, enUS, zhCN } from 'date-fns/locale';
+import { useLanguage } from '../lib/LanguageContext';
 
 interface Props {
   isOpen: boolean;
@@ -18,6 +19,11 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
   const [cardTheme, setCardTheme] = useState<'glass' | 'polaroid' | 'vintage' | 'landing' | 'elegant'>('glass');
   const [isDownloading, setIsDownloading] = useState(false);
   const [base64Bg, setBase64Bg] = useState<string | null>(null);
+  const { language, t } = useLanguage();
+  
+  const currentLocale = language === 'en' ? enUS : language === 'zh' ? zhCN : id;
+  const currentMessageText = language === 'en' && message?.message_en ? message.message_en : language === 'zh' && message?.message_zh ? message.message_zh : message?.message;
+  const currentGreetingText = language === 'en' && greeting?.text_en ? greeting.text_en : language === 'zh' && greeting?.text_zh ? greeting.text_zh : greeting?.text;
   
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -177,14 +183,14 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                   <div className="w-[85%] bg-white/30 backdrop-blur-3xl rounded-[4rem] border-4 border-white/60 p-20 flex flex-col items-center text-center shadow-2xl" style={{ boxShadow: '0 25px 50px -12px rgba(236,72,153,0.2)' }}>
                     <Heart className="w-24 h-24 animate-pulse mb-8" style={{ color: '#ec4899', fill: '#ec4899' }} />
                     <h2 className="text-5xl font-display italic mb-16 px-8" style={{ color: '#111827' }}>
-                      "{greeting?.text || 'Semoga harimu menyenangkan, Sayang.'}"
+                      "{currentGreetingText || t('for_my_love')}"
                     </h2>
                     <p className="text-4xl leading-relaxed font-serif px-8" style={{ color: '#1f2937' }}>
-                      {message?.message || 'Maaf Sayang, Tauffan belum menulis pesan untuk hari ini.'}
+                      {currentMessageText || t('no_message_today')}
                     </p>
                     <div className="mt-20 w-40 h-2 bg-gradient-to-r from-transparent to-transparent rounded-full" style={{ backgroundImage: 'linear-gradient(to right, transparent, #f472b6, transparent)' }} />
                     <p className="mt-12 text-3xl font-bold tracking-[0.3em] uppercase opacity-60" style={{ color: '#be185d' }}>Triana's Daily Love</p>
-                    <p className="mt-4 text-2xl font-medium" style={{ color: '#db2777' }}>{format(new Date(), 'd MMMM yyyy', {locale: id})}</p>
+                    <p className="mt-4 text-2xl font-medium" style={{ color: '#db2777' }}>{format(new Date(), 'd MMMM yyyy', {locale: currentLocale})}</p>
                   </div>
                 </div>
               )}
@@ -201,11 +207,11 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                       )}
                       
                       <div className="relative z-10 text-center px-16">
-                         <h2 className="text-[3.5rem] leading-tight font-serif italic font-medium drop-shadow-sm" style={{ color: '#1f2937' }}>"{greeting?.text}"</h2>
+                         <h2 className="text-[3.5rem] leading-tight font-serif italic font-medium drop-shadow-sm" style={{ color: '#1f2937' }}>"{currentGreetingText}"</h2>
                       </div>
                     </div>
                     <p className="text-[2.5rem] leading-relaxed font-sans text-center px-8" style={{ color: '#1f2937' }}>
-                      {message?.message || 'Belum ada pesan.'}
+                      {currentMessageText || t('no_message_today')}
                     </p>
                     <div className="absolute bottom-16 right-16 text-[2.5rem] font-sans italic transform -rotate-12 opacity-80 decoration-wavy" style={{ color: '#ec4899' }}>
                       A beautiful memory
@@ -227,15 +233,15 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                        <Sparkles className="w-32 h-32" style={{ color: '#78350f' }} />
                     </div>
                     <p className="text-4xl uppercase tracking-[0.5em] font-bold mb-4" style={{ color: '#78350f' }}>SURAT HARI INI</p>
-                    <p className="text-3xl font-medium mb-24" style={{ color: 'rgba(146,64,14,0.6)' }}>{format(new Date(), 'EEEE, d MMMM yyyy', {locale: id})}</p>
+                    <p className="text-3xl font-medium mb-24" style={{ color: 'rgba(146,64,14,0.6)' }}>{format(new Date(), 'EEEE, d MMMM yyyy', {locale: currentLocale})}</p>
                     
                     <h2 className="text-[4.5rem] leading-tight font-serif italic mb-20" style={{ color: '#431407' }}>
-                      "{greeting?.text}"
+                      "{currentGreetingText}"
                     </h2>
                     
                     <div className="flex-1 px-8">
                       <p className="text-[2.75rem] leading-[2em] font-serif" style={{ color: '#78350f' }}>
-                        {message?.message || 'Belum ada pesan.'}
+                        {currentMessageText || t('no_message_today')}
                       </p>
                     </div>
 
@@ -264,12 +270,12 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                     </div>
 
                     <h2 className="text-[3.5rem] leading-tight font-display italic mb-10 px-8" style={{ color: '#111827' }}>
-                      "{greeting?.text}"
+                      "{currentGreetingText}"
                     </h2>
                     
                     <div className="px-12 w-full max-h-[500px] overflow-hidden flex justify-center">
                       <p className="text-[2.25rem] leading-[1.8em] font-sans font-medium" style={{ color: '#1f2937' }}>
-                        {message?.message || 'Belum ada pesan hari ini.'}
+                        {currentMessageText || t('no_message_today')}
                       </p>
                     </div>
 
@@ -293,10 +299,10 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
 
                     <div className="flex-1 flex flex-col justify-center items-start mt-20 pl-16 border-l shadow-[inset_1px_0_0_0_rgba(255,255,255,0.1)]" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
                       <h2 className="text-[4.5rem] leading-tight font-serif italic mb-12 drop-shadow-lg" style={{ color: '#f8fafc' }}>
-                        "{greeting?.text}"
+                        "{currentGreetingText}"
                       </h2>
                       <p className="text-[2.5rem] leading-[2em] font-sans font-light w-[90%]" style={{ color: '#cbd5e1' }}>
-                        {message?.message || 'Belum ada pesan.'}
+                        {currentMessageText || t('no_message_today')}
                       </p>
                     </div>
 
@@ -320,14 +326,14 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         <div className="w-full md:w-[320px] flex flex-col space-y-8 pt-8 md:pt-0">
           <div>
             <h3 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-pink-500" /> Share Happiness
+              <Sparkles className="w-5 h-5 text-pink-500" /> {t('share_happiness')}
             </h3>
-            <p className="text-xs text-gray-500">Kemas pesan romantis ini menjadi gambar manis dan bagikan ke media sosial.</p>
+            <p className="text-xs text-gray-500">{t('share_happiness_desc')}</p>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">1. Pilih Ukuran (Rasio)</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">{t('select_size')}</label>
               <div className="grid grid-cols-2 gap-3">
                 <button 
                   onClick={() => setResolution('2:3')}
@@ -347,14 +353,14 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
             </div>
 
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block mt-6">2. Pilih Tema Kartu</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block mt-6">{t('select_theme')}</label>
               <div className="space-y-2">
                 {[
-                  { id: 'landing', name: 'Original UI', desc: 'Layout sama seperti Beranda web' },
-                  { id: 'elegant', name: 'Midnight Elegance', desc: 'Gelap, Estensial, Mewah & Elegan' },
-                  { id: 'glass', name: 'Glassmorphism', desc: 'Bersih, efek kaca tembus pandang' },
-                  { id: 'polaroid', name: 'Classic Polaroid', desc: 'Bingkai foto retro manis' },
-                  { id: 'vintage', name: 'Vintage Love Letter', desc: 'Kertas romantis klasik' },
+                  { id: 'landing', name: t('theme_original'), desc: t('desc_original') },
+                  { id: 'elegant', name: t('theme_elegant'), desc: t('desc_elegant') },
+                  { id: 'glass', name: t('theme_glass'), desc: t('desc_glass') },
+                  { id: 'polaroid', name: t('theme_polaroid'), desc: t('desc_polaroid') },
+                  { id: 'vintage', name: t('theme_vintage'), desc: t('desc_vintage') },
                 ].map((t) => (
                   <button
                     key={t.id}
@@ -376,15 +382,15 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
               className={`w-full py-4 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-pink-200 transition-transform active:scale-95 ${isDownloading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02]'}`}
             >
               {isDownloading ? (
-                <>Menyiapkan Gambar...</>
+                <>{t('preparing_image')}</>
               ) : (
                 <>
-                  <Download className="w-5 h-5" /> Download Kartu
+                  <Download className="w-5 h-5" /> {t('download_button')}
                 </>
               )}
             </button>
             <button onClick={onClose} className="w-full py-3 mt-2 text-gray-400 text-xs font-bold hover:text-gray-600 transition-colors">
-              Batal
+              {t('cancel')}
             </button>
           </div>
 

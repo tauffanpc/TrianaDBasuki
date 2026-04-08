@@ -49,18 +49,48 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
     }
     setIsDownloading(true);
     
+    // Simpan posisi scroll sebelum capture
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    
     try {
-      // Temporarily remove transform for accurate rendering
+      // RESET: Pastikan elemen berada di posisi 'static' tanpa transform selama proses penangkapan gambar
       const originalTransform = cardRef.current.style.transform;
-      cardRef.current.style.transform = 'scale(1)';
+      const originalPosition = cardRef.current.style.position;
+      const originalMargin = cardRef.current.style.margin;
+      
+      // Paksa ke ukuran asli 1:1 untuk akurasi pixel
+      cardRef.current.style.transform = 'none';
+      cardRef.current.style.position = 'fixed';
+      cardRef.current.style.top = '0';
+      cardRef.current.style.left = '0';
+      cardRef.current.style.zIndex = '-9999';
+      cardRef.current.style.margin = '0';
       
       const canvas = await (window as any).html2canvas(cardRef.current, {
-        scale: 2, // High resolution
+        scale: 2, // High resolution (Full HD+)
         useCORS: true,
         allowTaint: false,
         backgroundColor: null,
+        width: w,
+        height: h,
+        windowWidth: w,
+        windowHeight: h,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0,
         onclone: (clonedDoc: any) => {
           try {
+            // Temukan elemen di dokumen kloning
+            const clonedCard = clonedDoc.querySelector(`[style*="width: ${w}px"]`);
+            if (clonedCard) {
+               clonedCard.style.transform = 'none';
+               clonedCard.style.position = 'relative';
+               clonedCard.style.top = 'auto';
+               clonedCard.style.left = 'auto';
+            }
+
             // Ultimate fallback to strip out any OKLAB/OKLCH colors injected by Tailwind V4
             const elements = clonedDoc.querySelectorAll('*');
             elements.forEach((el: any) => {
@@ -84,7 +114,16 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         }
       });
 
+      // Kembalikan ke keadaan semula untuk Preview UI
       cardRef.current.style.transform = originalTransform;
+      cardRef.current.style.position = originalPosition;
+      cardRef.current.style.top = '';
+      cardRef.current.style.left = '';
+      cardRef.current.style.zIndex = '';
+      cardRef.current.style.margin = originalMargin;
+      
+      // Kembalikan scroll
+      window.scrollTo(scrollX, scrollY);
 
       const image = canvas.toDataURL('image/png');
       const link = document.createElement('a');

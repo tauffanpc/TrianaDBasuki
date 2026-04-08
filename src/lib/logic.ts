@@ -17,47 +17,44 @@ export async function getDailyMessage(date: Date) {
   const supabase = getSupabase();
 
   try {
-    // 1. Prioritize exact match (day + month + year)
-    const { data: exactYearMatch } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .select('*')
       .eq('day', day)
-      .eq('month', month)
-      .eq('year', year)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .eq('is_active', true);
 
-    if (exactYearMatch) return exactYearMatch as Message;
+    if (error) {
+      console.error('Supabase error fetching messages:', error);
+      return null;
+    }
 
-    // 2. Prioritize exact match without year (day + month, year = null)
-    const { data: exactMatch } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('day', day)
-      .eq('month', month)
-      .is('year', null)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    if (!data || data.length === 0) return null;
 
-    if (exactMatch) return exactMatch as Message;
+    // Filter out messages that don't match the month (unless it's a recurring monthly message)
+    const validMessages = data.filter(m => m.month === month || m.month === null);
 
-    // 3. Fallback to recurring monthly (day only, month = null, year = null)
-    const { data: dayMatch } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('day', day)
-      .is('month', null)
-      .is('year', null)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Filter out messages that have a specific year which is not current year
+    const messagesForThisYear = validMessages.filter(m => m.year === year || m.year === null || m.year === undefined);
 
-    if (dayMatch) return dayMatch as Message;
+    if (messagesForThisYear.length === 0) return null;
+
+    // Sort to find the best match:
+    // 1. Exact year over null year
+    // 2. Exact month over null month
+    // 3. Newest first (created_at)
+    messagesForThisYear.sort((a, b) => {
+      if (a.year !== b.year) {
+        if (a.year === year) return -1;
+        if (b.year === year) return 1;
+      }
+      if (a.month !== b.month) {
+        if (a.month === month) return -1;
+        if (b.month === month) return 1;
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+    return messagesForThisYear[0] as Message;
   } catch (err) {
     console.error('Error fetching daily message:', err);
   }

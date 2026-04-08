@@ -196,20 +196,27 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
                         currentTheme.name?.toLowerCase().includes('ultah') ||
                         currentTheme.name?.toLowerCase().includes('birthday');
   const isHome = location.pathname === '/home' || location.pathname === '/';
-  const isImageUrl = !isHome && (currentBg.startsWith('http') || currentBg.startsWith('https') || currentBg.startsWith('data:'));
-  const isGradient = currentBg.includes('gradient') || currentBg.startsWith('var(');
 
   return (
-    <div 
-      className="min-h-screen text-[#4a4a4a] font-sans selection:bg-pink-100 selection:text-pink-600 relative transition-all duration-1000"
-      style={{ 
-        backgroundImage: isImageUrl ? `url(${currentBg})` : (isGradient ? currentBg : undefined),
-        backgroundColor: (!isImageUrl && !isGradient) ? currentBg : undefined,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
-      }}
-    >
+    <div className={cn(
+      "min-h-screen relative overflow-x-hidden text-[var(--primary-color)] selection:bg-pink-200 pointer-events-auto transition-colors duration-1000",
+      fullWidth ? "bg-white/10 backdrop-blur-[2px]" : ""
+    )}>
+      {/* Background layer */}
+      <div 
+        className="fixed inset-0 -z-10 transition-all duration-1000"
+        style={{
+          backgroundImage: customBg ? `url(${customBg})` : (
+            currentTheme?.background_url?.startsWith('http') 
+              ? `url(${currentTheme.background_url})` 
+              : 'var(--bg-gradient)'
+          ),
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+          opacity: fullWidth ? 0.9 : 1
+        }}
+      />
       <div id="custom-theme-html" className="fixed inset-0 pointer-events-none z-0 overflow-hidden" />
       <FloatingHearts />
       {isSpecialTheme && <HeartConfetti />}

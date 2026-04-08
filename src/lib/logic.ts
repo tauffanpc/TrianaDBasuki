@@ -76,21 +76,29 @@ export async function getGreeting() {
 }
 
 export async function logMood(mood: string, deviceId: string) {
-  const supabase = getSupabase();
-  const { error } = await supabase.from('mood_logs').insert({
-    mood,
-    device_id: deviceId
-  });
-  if (error) throw error;
+  try {
+    const supabase = getSupabase();
+    const { error } = await supabase.from('mood_logs').insert({
+      mood,
+      device_id: deviceId
+    });
+    if (error) console.error('Failed to log mood:', error.message);
+  } catch (err) {
+    console.error('Mood logging exception:', err);
+  }
 }
 
 export async function sendUserMessage(content: string, deviceId: string) {
-  const supabase = getSupabase();
-  const { error } = await supabase.from('user_messages').insert({
-    content,
-    device_id: deviceId
-  });
-  if (error) throw error;
+  try {
+    const supabase = getSupabase();
+    const { error } = await supabase.from('user_messages').insert({
+      content,
+      device_id: deviceId
+    });
+    if (error) console.error('Failed to send user message:', error.message);
+  } catch (err) {
+    console.error('User message exception:', err);
+  }
 }
 
 export async function getDailyBackground(date: Date) {

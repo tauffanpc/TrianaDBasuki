@@ -271,8 +271,8 @@ export default function Landing() {
               className="space-y-6 overflow-hidden"
             >
               <div className="text-center space-y-2">
-                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Bagaimana perasaanmu saat ini?</h3>
-                <p className="text-xs italic text-pink-500">Pilih satu untuk memberitahu Tauffan...</p>
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">{t('mood_question')}</h3>
+                <p className="text-xs italic text-pink-500">{t('mood_hint')}</p>
               </div>
               
               <div className="flex flex-wrap justify-center gap-4 px-4">
@@ -310,7 +310,7 @@ export default function Landing() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-pink-50 rounded-full text-[10px] font-bold text-pink-500 uppercase tracking-widest border border-pink-100">
               <Heart className="w-3 h-3 fill-current" />
-              Mood Terkirim ke Tauffan
+              {t('mood_sent')}
             </div>
           </motion.div>
         )}
@@ -327,12 +327,12 @@ export default function Landing() {
               <div className="w-9 h-9 bg-pink-50 rounded-xl flex items-center justify-center text-pink-500">
                 <BookOpen className="w-5 h-5" />
               </div>
-              <h4 className="font-bold text-xs uppercase tracking-[0.15em] text-pink-600 italic">Diary Triana</h4>
+              <h4 className="font-bold text-xs uppercase tracking-[0.15em] text-pink-600 italic">{t('diary_title')}</h4>
             </div>
           </div>
           
           <p className="text-xs text-gray-700 leading-relaxed italic opacity-80 backdrop-blur-sm bg-white/30 p-4 rounded-xl border border-white/40">
-            "Buku harian rahasia milikku. Di sini aku bisa menulis keluh kesah, harapan, dan pikiranku tanpa takut dihakimi. Tempat aman yang hanya aku sendiri yang menyimpan, tak akan ada siapapun yang membacanya..."
+            {t('diary_description')}
           </p>
 
           <div className="space-y-4">
@@ -340,7 +340,7 @@ export default function Landing() {
               <textarea
                 value={userCurhat}
                 onChange={(e) => setUserCurhat(e.target.value)}
-                placeholder="Dear Diary, hari ini rasanya..."
+                placeholder={t('curhat_placeholder')}
                 className="w-full bg-pink-50/50 border border-pink-100 focus:border-pink-300 rounded-3xl p-6 text-sm text-gray-800 focus:ring-4 focus:ring-pink-100/50 outline-none transition-all min-h-[160px] resize-none shadow-inner italic placeholder:text-gray-400 font-serif leading-relaxed"
               />
               <button
@@ -363,7 +363,7 @@ export default function Landing() {
                   exit={{ opacity: 0, y: -10 }}
                   className="text-[10px] font-bold text-pink-500 flex items-center justify-center gap-1.5 bg-pink-50 py-2.5 rounded-xl border border-pink-100"
                 >
-                  <Heart className="w-3 h-3 fill-current" /> Tersimpan aman dalam Diary.
+                  <Heart className="w-3 h-3 fill-current" /> {t('curhat_sent')}
                 </motion.p>
               )}
             </AnimatePresence>

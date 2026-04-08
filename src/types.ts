@@ -4,6 +4,8 @@ export interface Message {
   month: number | null;
   year?: number | null;
   message: string;
+  message_en?: string | null;
+  message_zh?: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -12,6 +14,8 @@ export interface Greeting {
   id: string;
   type: 'daily' | 'random';
   text: string;
+  text_en?: string | null;
+  text_zh?: string | null;
   is_active: boolean;
 }
 

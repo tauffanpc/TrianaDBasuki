@@ -66,7 +66,7 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    const auth = localStorage.getItem('admin_auth');
+    const auth = localStorage.getItem('admin_auth_token');
     if (!auth) {
       navigate('/admin-login');
     } else {
@@ -118,10 +118,12 @@ export default function AdminDashboard() {
     setIsThemesTableMissing(false);
     try {
       const supabase = getSupabase();
+      
+      // Gunakan query yang lebih stabil
       const [msgs, greets, moods, inbox, themesData] = await Promise.all([
-        supabase.from('messages').select('*').order('day', { ascending: true }),
+        supabase.from('messages').select('*').order('month', { ascending: true }).order('day', { ascending: true }),
         supabase.from('greetings').select('*'),
-        supabase.from('mood_logs').select('*').order('created_at', { ascending: false }),
+        supabase.from('mood_logs').select('*').order('created_at', { ascending: false }).limit(200),
         supabase.from('user_messages').select('*').order('created_at', { ascending: false }),
         supabase.from('themes').select('*').order('created_at', { ascending: true })
       ]);
@@ -132,10 +134,11 @@ export default function AdminDashboard() {
       if (inbox.error) throw inbox.error;
 
       if (themesData.error) {
-        if (themesData.error.code === 'PGRST205') {
+        if (themesData.error.code === 'PGRST205' || themesData.error.message.includes('relation "themes" does not exist')) {
           setIsThemesTableMissing(true);
         } else {
-          throw themesData.error;
+          // Abaikan error lain jika tabel themes memang sengaja belum dibuat
+          console.warn('Themes fetch error:', themesData.error);
         }
       }
 
@@ -145,6 +148,7 @@ export default function AdminDashboard() {
       setUserMessages(inbox.data || []);
       setThemes(themesData.data || []);
     } catch (err: any) {
+      console.error('Fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -152,7 +156,7 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_auth');
+    localStorage.removeItem('admin_auth_token');
     navigate('/');
   };
 

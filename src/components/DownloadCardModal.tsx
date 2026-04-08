@@ -49,26 +49,33 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
     }
     setIsDownloading(true);
     
-    // Simpan posisi scroll sebelum capture
+    // Simpan posisi scroll
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;
     
     try {
-      // RESET: Pastikan elemen berada di posisi 'static' tanpa transform selama proses penangkapan gambar
+      // Simpan state original untuk preview UI
       const originalTransform = cardRef.current.style.transform;
       const originalPosition = cardRef.current.style.position;
       const originalMargin = cardRef.current.style.margin;
+      const originalWidth = cardRef.current.style.width;
+      const originalHeight = cardRef.current.style.height;
+
+      // PAKSA UKURAN ASLI 1:1 UNTUK CAPTURE (Tanpa Scale)
+      const w = 1080;
+      const h = resolution === '9:16' ? 1920 : 1620;
       
-      // Paksa ke ukuran asli 1:1 untuk akurasi pixel
       cardRef.current.style.transform = 'none';
       cardRef.current.style.position = 'fixed';
       cardRef.current.style.top = '0';
       cardRef.current.style.left = '0';
+      cardRef.current.style.width = `${w}px`;
+      cardRef.current.style.height = `${h}px`;
       cardRef.current.style.zIndex = '-9999';
       cardRef.current.style.margin = '0';
       
       const canvas = await (window as any).html2canvas(cardRef.current, {
-        scale: 2,
+        scale: 2, 
         useCORS: true,
         allowTaint: false,
         backgroundColor: null,
@@ -76,18 +83,17 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         height: h,
         windowWidth: w,
         windowHeight: h,
-        x: 0,
-        y: 0,
-        scrollX: 0,
-        scrollY: 0,
         onclone: (clonedDoc: any) => {
           try {
+            // FIX FATAL: Hapus format warna oklab/oklch dari seluruh dokumen kloning
+            // Ini mencegah crash pada html2canvas
             const styleSheets = Array.from(clonedDoc.styleSheets);
             styleSheets.forEach((sheet: any) => {
               try {
                 const rules = Array.from(sheet.cssRules);
                 rules.forEach((rule: any) => {
                   if (rule.cssText && (rule.cssText.includes('oklab') || rule.cssText.includes('oklch'))) {
+                    // Paksa warna fallback standar (Pink Tailwind)
                     rule.style.cssText = rule.style.cssText
                       .replace(/oklab\([^)]+\)/g, '#ec4899') 
                       .replace(/oklch\([^)]+\)/g, '#ec4899');
@@ -96,10 +102,20 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
               } catch (e) {}
             });
 
+            // Temukan kartu di dokumen kloning
+            const clonedCard = clonedDoc.querySelector(`[style*="width: ${w}px"]`);
+            if (clonedCard) {
+               clonedCard.style.transform = 'none';
+               clonedCard.style.position = 'relative';
+               clonedCard.style.top = 'auto';
+               clonedCard.style.left = 'auto';
+            }
+
+            // Bersihkan sisa oklab di elemen inline
             const elements = clonedDoc.querySelectorAll('*');
             elements.forEach((el: any) => {
-              const style = el.getAttribute('style') || '';
-              if (style.includes('oklab') || style.includes('oklch')) {
+              const styleAttr = el.getAttribute('style') || '';
+              if (styleAttr.includes('oklab') || styleAttr.includes('oklch')) {
                  el.style.cssText = el.style.cssText
                    .replace(/oklab\([^)]+\)/g, '#ec4899')
                    .replace(/oklch\([^)]+\)/g, '#ec4899');
@@ -111,8 +127,11 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         }
       });
 
+      // Kembalikan ke state UI semula
       cardRef.current.style.transform = originalTransform;
       cardRef.current.style.position = originalPosition;
+      cardRef.current.style.width = originalWidth;
+      cardRef.current.style.height = originalHeight;
       cardRef.current.style.top = '';
       cardRef.current.style.left = '';
       cardRef.current.style.zIndex = '';
@@ -129,7 +148,7 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
       onClose();
     } catch (err: any) {
       console.error('Failed to download card:', err);
-      alert('Maaf, terjadi kesalahan: ' + (err.message || err.toString()) + '\n\nSilakan coba lagi.');
+      alert('Maaf, terjadi kesalahan: ' + (err.message || err.toString()));
     } finally {
       setIsDownloading(false);
     }

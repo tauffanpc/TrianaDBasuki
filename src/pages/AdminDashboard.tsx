@@ -339,9 +339,10 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
         {/* Mobile Sidebar Toggle */}
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="md:hidden fixed bottom-24 right-6 z-[60] p-4 bg-pink-500 text-white rounded-full shadow-2xl"
+          className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-6 py-3.5 bg-gradient-to-r from-pink-500/90 to-rose-400/90 backdrop-blur-md text-white rounded-full shadow-xl shadow-pink-500/30 flex items-center gap-2.5 font-bold text-sm transition-transform active:scale-95 border border-white/20"
         >
-          <LayoutDashboard className="w-6 h-6" />
+          <LayoutDashboard className="w-5 h-5" />
+          <span>Menu Navigasi</span>
         </button>
 
         <AnimatePresence>

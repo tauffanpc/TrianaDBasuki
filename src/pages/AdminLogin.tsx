@@ -13,10 +13,17 @@ export default function AdminLogin() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || '18';
+    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+
+    if (!correctPassword) {
+      setError('Sistem belum terkonfigurasi (VITE_ADMIN_PASSWORD belum diset).');
+      return;
+    }
 
     if (username === ADMIN_USERNAME && password === correctPassword) {
-      localStorage.setItem('admin_auth', 'true');
+      // Obfuscasi sederhana: gunakan hash atau string unik alih-alih 'true'
+      const sessionToken = btoa(`admin_session_${new Date().getTime()}`);
+      localStorage.setItem('admin_auth_token', sessionToken);
       navigate('/admin');
     } else {
       setError('Username atau password salah.');

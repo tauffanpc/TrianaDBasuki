@@ -78,7 +78,7 @@ export default function Archive() {
   });
 
   const filteredArchive = allDays.filter(item => {
-    const defaultMsg = "Aku mencintaimu lebih dari kemarin.";
+    const defaultMsg = t('no_message_today');
     const textToSearch = item.message?.message || defaultMsg;
     const matchesSearch = textToSearch.toLowerCase().includes(searchTerm.toLowerCase());
     const itemMonth = (item.date.getMonth() + 1).toString();
@@ -102,7 +102,7 @@ export default function Archive() {
 
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-gray-900">{t('archive')}</h1>
-          <p className="text-sm text-pink-600 font-medium tracking-wide">Kenangan yang telah kita lewati</p>
+          <p className="text-sm text-pink-600 font-medium tracking-wide">{t('archive_subtitle')}</p>
         </div>
 
         {/* Filters */}
@@ -175,21 +175,21 @@ export default function Archive() {
                 </div>
                 {item.isToday && (
                   <span className="bg-white text-pink-600 text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider shadow-sm">
-                    Hari Ini
+                    {t('today_label')}
                   </span>
                 )}
                 {item.isFuture && <Lock className="w-3.5 h-3.5 text-gray-500" />}
               </div>
 
               {item.isFuture ? (
-                <p className="text-[11px] text-gray-500 italic">Pesan ini masih terkunci...</p>
+                <p className="text-[11px] text-gray-500 italic">{t('locked_message')}</p>
               ) : (
                 <div className="flex justify-between items-end gap-5">
                   <p className={cn(
                     "text-sm leading-relaxed italic font-medium",
                     item.isToday ? "text-white/90" : "text-gray-800"
                   )}>
-                    "{language === 'en' && item.message?.message_en ? item.message.message_en : language === 'zh' && item.message?.message_zh ? item.message.message_zh : (item.message?.message || "Aku mencintaimu lebih dari kemarin.")}"
+                    "{language === 'en' && item.message?.message_en ? item.message.message_en : language === 'zh' && item.message?.message_zh ? item.message.message_zh : (item.message?.message || t('no_message_today'))}"
                   </p>
                   <ChevronRight className={cn("w-4 h-4 flex-shrink-0", item.isToday ? "text-white/40" : "text-pink-300")} />
                 </div>

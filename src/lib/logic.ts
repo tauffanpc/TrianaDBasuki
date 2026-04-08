@@ -15,27 +15,35 @@ export async function getDailyMessage(date: Date) {
   const month = date.getMonth() + 1;
   const supabase = getSupabase();
 
-  // Prioritize exact match (day + month)
-  const { data: exactMatch } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('day', day)
-    .eq('month', month)
-    .eq('is_active', true)
-    .single();
+  try {
+    // Prioritize exact match (day + month)
+    const { data: exactMatch, error: exactError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('day', day)
+      .eq('month', month)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false }) // Ambil yang terbaru jika duplikat
+      .limit(1)
+      .maybeSingle();
 
-  if (exactMatch) return exactMatch as Message;
+    if (exactMatch) return exactMatch as Message;
 
-  // Fallback to day only (recurring monthly)
-  const { data: dayMatch } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('day', day)
-    .is('month', null)
-    .eq('is_active', true)
-    .single();
+    // Fallback to day only (recurring monthly)
+    const { data: dayMatch, error: dayError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('day', day)
+      .is('month', null)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  if (dayMatch) return dayMatch as Message;
+    if (dayMatch) return dayMatch as Message;
+  } catch (err) {
+    console.error('Error fetching daily message:', err);
+  }
 
   return null;
 }
@@ -100,12 +108,13 @@ export async function getDailyBackground(date: Date) {
 }
 
 export function getDayCounter(firstVisitDate: string) {
-  // Bandingkan hanya tanggal kalender (tanpa jam/menit/detik)
-  // Hari pertama kunjungan = Day 1, besoknya = Day 2, dst.
-  const start = new Date(firstVisitDate);
+  // Gunakan WITA untuk perhitungan yang konsisten
+  const start = toZonedTime(new Date(firstVisitDate), TIMEZONE);
   const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const now = new Date();
+  
+  const now = toZonedTime(new Date(), TIMEZONE);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
   const diffTime = today.getTime() - startDate.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   return diffDays + 1;

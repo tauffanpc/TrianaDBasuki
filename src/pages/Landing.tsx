@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { id, enUS, zhCN } from 'date-fns/locale';
 import { Heart, Send, Sparkles, MessageCircle, Share2, BookOpen, Clock } from 'lucide-react';
-import { getCurrentWitaDate, getDailyMessage, getGreeting, logMood, getDayCounter, getDailyBackground, sendUserMessage, getUserDiaryArchive } from '../lib/logic';
+import { getCurrentWitaDate, getDailyMessage, getGreeting, logMood, getDayCounter, getDailyBackground, sendUserMessage, getUserDiaryArchive, getGreetingSettings, getTimeBasedGreetingKey } from '../lib/logic';
 import { Message, Greeting, UserMessage } from '../types';
 import { MOODS } from '../constants';
 import Layout from '../components/Layout';
@@ -62,6 +62,7 @@ export default function Landing() {
   const [error, setError] = useState<string | null>(null);
   const [background, setBackground] = useState<string | null>(null);
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
+  const [autoGreeting, setAutoGreeting] = useState<string | null>(null);
   const { language, t } = useLanguage();
   
   // User Curhat State
@@ -85,13 +86,8 @@ export default function Landing() {
         const currentWita = getCurrentWitaDate(previewDate);
         setDate(currentWita);
 
-        let firstVisit = localStorage.getItem('first_visit_date');
-        if (!firstVisit) {
-          // Set first visit menggunakan WITA
-          firstVisit = currentWita.toISOString();
-          localStorage.setItem('first_visit_date', firstVisit);
-        }
-        setDayCount(getDayCounter(firstVisit));
+        // Cek Day Counter
+        setDayCount(getDayCounter());
 
         let deviceId = localStorage.getItem('device_id');
         if (!deviceId) {
@@ -99,16 +95,20 @@ export default function Landing() {
           localStorage.setItem('device_id', deviceId);
         }
 
-        const [msg, greet, bg, archive] = await Promise.all([
+        const [msg, greet, bg, archive, settings] = await Promise.all([
           getDailyMessage(currentWita),
           getGreeting(),
           getDailyBackground(currentWita),
-          getUserDiaryArchive(deviceId)
+          getUserDiaryArchive(deviceId),
+          getGreetingSettings()
         ]);
+
+        if (settings.isActive && settings.days.includes(currentWita.getDay())) {
+          setAutoGreeting(getTimeBasedGreetingKey());
+        }
 
         setMessage(msg);
         setGreeting(greet);
-        if (bg) setBackground(bg.url);
         if (bg) setBackground(bg.url);
       } catch (err: any) {
         setError(err.message);
@@ -185,7 +185,7 @@ export default function Landing() {
             <Heart className="w-3 h-3 fill-current animate-pulse" />
           </div>
           <h2 className="text-lg md:text-xl font-display font-medium text-gray-900 leading-tight italic px-4">
-            "{language === 'en' && greeting?.text_en ? greeting.text_en : language === 'zh' && greeting?.text_zh ? greeting.text_zh : (greeting?.text || t('dear_diary'))}"
+            "{autoGreeting ? `${t(autoGreeting as any)}, ` : ''}{language === 'en' && greeting?.text_en ? greeting.text_en : language === 'zh' && greeting?.text_zh ? greeting.text_zh : (greeting?.text || t('dear_diary'))}"
           </h2>
         </motion.div>
 

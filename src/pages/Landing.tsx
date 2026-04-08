@@ -12,22 +12,38 @@ import { cn } from '../lib/utils';
 
 function TypingText({ text, speed = 40 }: { text: string; speed?: number }) {
   const [displayedText, setDisplayedText] = useState('');
+  const [isDone, setIsDone] = useState(false);
   
   useEffect(() => {
     let index = 0;
     setDisplayedText('');
+    setIsDone(false);
     if (!text) return;
     
     const interval = setInterval(() => {
       setDisplayedText(text.slice(0, index + 1));
       index++;
-      if (index >= text.length) clearInterval(interval);
+      if (index >= text.length) {
+        clearInterval(interval);
+        setIsDone(true);
+      }
     }, speed);
     
     return () => clearInterval(interval);
   }, [text, speed]);
 
-  return <>{displayedText}</>;
+  return (
+    <span className="relative">
+      {displayedText}
+      {!isDone && (
+        <motion.span
+          animate={{ opacity: [1, 0] }}
+          transition={{ duration: 0.5, repeat: Infinity }}
+          className="inline-block w-[3px] h-[1.2em] bg-[var(--primary-color)] ml-1 align-middle"
+        />
+      )}
+    </span>
+  );
 }
 
 export default function Landing() {
@@ -67,7 +83,8 @@ export default function Landing() {
 
         let firstVisit = localStorage.getItem('first_visit_date');
         if (!firstVisit) {
-          firstVisit = new Date().toISOString();
+          // Set first visit menggunakan WITA
+          firstVisit = currentWita.toISOString();
           localStorage.setItem('first_visit_date', firstVisit);
         }
         setDayCount(getDayCounter(firstVisit));

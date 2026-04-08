@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Sparkles, Flame } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FloatingHearts } from '../components/Layout';
+import { useLanguage } from '../lib/LanguageContext';
 
 export default function Intro() {
   const navigate = useNavigate();
   const [showPopup, setShowPopup] = useState(false);
+  const { t } = useLanguage();
 
   const handleEnter = () => {
     // Trigger day counter by setting first visit if not exists
@@ -64,7 +66,7 @@ export default function Intro() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.8 }}
           >
-            <h2 className="text-pink-600 text-xl mb-1 font-medium tracking-wide">Untuk Cintaku,</h2>
+            <h2 className="text-pink-600 text-xl mb-1 font-medium tracking-wide">{t('for_my_love')},</h2>
             <h1 className="text-4xl font-bold tracking-tight leading-tight text-gray-900">
               <span className="text-romantic-gradient">
                 Triana D. Basuki
@@ -79,7 +81,7 @@ export default function Intro() {
             className="relative px-4"
           >
             <p className="text-gray-700 text-base max-w-[280px] mx-auto leading-relaxed font-medium italic">
-              Setiap detik yang terlewati adalah bukti betapa berartinya kamu bagiku.
+              {t('intro_message')}
             </p>
           </motion.div>
         </div>
@@ -93,7 +95,7 @@ export default function Intro() {
           onClick={handleEnter}
           className="px-12 py-5 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-full font-bold shadow-xl shadow-pink-100 transition-all flex items-center gap-3 mx-auto group relative overflow-hidden optimize-gpu"
         >
-          <span className="relative z-10 text-base tracking-widest uppercase">Buka Pesan Cintaku</span>
+          <span className="relative z-10 text-base tracking-widest uppercase">{t('open_message')}</span>
           <Heart className="w-5 h-5 fill-current group-hover:scale-110 transition-transform relative z-10" />
         </motion.button>
       </motion.div>
@@ -138,7 +140,7 @@ export default function Intro() {
                 transition={{ repeat: Infinity, duration: 2 }}
                 className="text-2xl font-bold text-gray-900 italic"
               >
-                Selamat Datang Kembali Sayangku...
+                {t('welcome_back')}
               </motion.h2>
             </motion.div>
           </motion.div>

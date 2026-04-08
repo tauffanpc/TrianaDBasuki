@@ -129,17 +129,55 @@ export async function getDailyBackground(date: Date) {
   return null;
 }
 
-export function getDayCounter(firstVisitDate: string) {
+export function getDayCounter() {
   // Gunakan WITA untuk perhitungan yang konsisten
-  const start = toZonedTime(new Date(firstVisitDate), TIMEZONE);
-  const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  // Hari Pertama dikunci secara absolut ke 07 April 2026
+  const startDate = new Date(2026, 3, 7); // Bulan 3 adalah April (0-indexed)
   
   const now = toZonedTime(new Date(), TIMEZONE);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
   const diffTime = today.getTime() - startDate.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays + 1;
+  return diffDays > 0 ? diffDays + 1 : 1; // Mencegah hasil negatif
+}
+
+export async function getGreetingSettings() {
+  try {
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from('greetings')
+      .select('text')
+      .eq('id', 'setting_time_greeting')
+      .limit(1);
+
+    if (data && data.length > 0) {
+      return JSON.parse(data[0].text);
+    }
+  } catch (err) {}
+  
+  // Default fallback
+  return { isActive: false, days: [0, 1, 2, 3, 4, 5, 6] };
+}
+
+export async function saveGreetingSettings(settings: { isActive: boolean, days: number[] }) {
+  const supabase = getSupabase();
+  await supabase.from('greetings').upsert({
+    id: 'setting_time_greeting',
+    type: 'system' as any, // fallback pseudo-type
+    text: JSON.stringify(settings),
+    is_active: true
+  });
+}
+
+export function getTimeBasedGreetingKey() {
+  const now = toZonedTime(new Date(), TIMEZONE);
+  const hour = now.getHours();
+
+  if (hour >= 5 && hour < 11) return 'morning';
+  if (hour >= 11 && hour < 15) return 'noon';
+  if (hour >= 15 && hour < 19) return 'afternoon';
+  return 'night';
 }
 
 export async function getUserDiaryArchive(deviceId: string) {

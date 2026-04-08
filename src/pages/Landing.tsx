@@ -62,7 +62,7 @@ export default function Landing() {
   const [background, setBackground] = useState<string | null>(null);
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
   const [diaryHistory, setDiaryHistory] = useState<UserMessage[]>([]);
-  const [showArchive, setShowArchive] = useState(false);
+  const [activeTab, setActiveTab] = useState<'beranda' | 'arsip'>('beranda');
   
   // User Curhat State
   const [userCurhat, setUserCurhat] = useState('');
@@ -327,18 +327,11 @@ export default function Landing() {
               <h4 className="font-bold text-xs uppercase tracking-[0.15em] text-pink-600 italic">Diary Triana</h4>
             </div>
             
-            {diaryHistory.length > 0 && (
-              <button 
-                onClick={() => setShowArchive(!showArchive)}
-                className="px-3 py-1.5 bg-white/50 border border-pink-100 text-pink-500 rounded-lg text-[10px] font-bold flex items-center gap-2 hover:bg-pink-50 transition-colors"
-              >
-                <Clock className="w-3 h-3" /> {showArchive ? 'Tutup Arsip' : 'Buka Arsip'}
-              </button>
-            )}
+            </div>
           </div>
           
           <p className="text-xs text-gray-700 leading-relaxed italic opacity-80 backdrop-blur-sm bg-white/30 p-4 rounded-xl border border-white/40">
-            "Buku harian rahasia milikku. Di sini aku bisa menulis keluh kesah, harapan, dan pikiranku tanpa takut dihakimi. Tempat aman yang hanya aku sendiri yang tersimpan, bahkan Tauffan pun tidak akan bisa membacanya..."
+            "Buku harian rahasia milikku. Di sini aku bisa menulis keluh kesah, harapan, dan pikiranku tanpa takut dihakimi. Tempat aman yang hanya aku sendiri yang menyimpan, tak akan ada siapapun yang membacanya..."
           </p>
 
           {!showArchive ? (
@@ -375,11 +368,13 @@ export default function Landing() {
                 )}
               </AnimatePresence>
             </div>
-          ) : (
+          ) : null}
+          
+          {activeTab === 'arsip' ? (
             <motion.div 
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="space-y-4 max-h-[300px] overflow-y-auto no-scrollbar pt-2"
+              className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar pt-2 mt-4"
             >
               <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-4">Catatan Sebelumnya</h5>
               {diaryHistory.map((item) => (
@@ -396,6 +391,32 @@ export default function Landing() {
           )}
         </motion.div>
       </div>
+
+      {/* Floating Bottom Menu for Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 z-50 flex justify-center pointer-events-none">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/40 shadow-2xl p-2 rounded-[2rem] flex items-center gap-2 pointer-events-auto w-full max-w-sm justify-between">
+          <button 
+            onClick={() => { setActiveTab('beranda'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className={`flex-1 flex flex-col items-center justify-center p-3 rounded-2xl transition-all ${
+              activeTab === 'beranda' ? 'bg-gradient-to-tr from-pink-500 to-rose-400 text-white shadow-lg' : 'text-gray-500 hover:bg-pink-50 hover:text-pink-600'
+            }`}
+          >
+            <Heart className={`w-5 h-5 mb-1 ${activeTab === 'beranda' ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Beranda</span>
+          </button>
+          
+          <button 
+            onClick={() => { setActiveTab('arsip'); setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100); }}
+            className={`flex-1 flex flex-col items-center justify-center p-3 rounded-2xl transition-all ${
+              activeTab === 'arsip' ? 'bg-gradient-to-tr from-pink-500 to-rose-400 text-white shadow-lg' : 'text-gray-500 hover:bg-pink-50 hover:text-pink-600'
+            }`}
+          >
+            <BookOpen className={`w-5 h-5 mb-1 ${activeTab === 'arsip' ? 'fill-current' : ''}`} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Arsip Diary</span>
+          </button>
+        </div>
+      </div>
+      <div className="pb-24" /> {/* Spacing for the floating menu */}
     </Layout>
   );
 }

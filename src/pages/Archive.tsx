@@ -2,19 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { Message } from '../types';
 import { format, subDays, isAfter, isSameDay } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id, enUS, zhCN } from 'date-fns/locale';
 import { getCurrentWitaDate } from '../lib/logic';
 import Layout from '../components/Layout';
 import { motion } from 'motion/react';
 import { Calendar, Lock, ChevronRight, ArrowLeft, Search, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import { useLanguage } from '../lib/LanguageContext';
 
 export default function Archive() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const today = getCurrentWitaDate();
+  const { language, t } = useLanguage();
 
   useEffect(() => {
     async function fetchArchive() {
@@ -84,8 +86,10 @@ export default function Archive() {
     return matchesSearch && matchesMonth;
   });
 
+  const currentLocale = language === 'en' ? enUS : language === 'zh' ? zhCN : id;
+
   return (
-    <Layout dateStr={format(today, 'MMMM yyyy', { locale: id })}>
+    <Layout dateStr={format(today, 'MMMM yyyy', { locale: currentLocale })}>
       <div className="space-y-10 py-4">
         <div className="flex items-center justify-between">
           <button 
@@ -97,7 +101,7 @@ export default function Archive() {
         </div>
 
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">Arsip Pesan</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('archive')}</h1>
           <p className="text-sm text-pink-600 font-medium tracking-wide">Kenangan yang telah kita lewati</p>
         </div>
 
@@ -109,7 +113,7 @@ export default function Archive() {
             </div>
             <input
               type="text"
-              placeholder="Cari pesan harian..."
+              placeholder={t('search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-11 pr-4 py-3 bg-white/60 backdrop-blur-md border border-white/60 focus:border-pink-300 rounded-2xl text-sm outline-none transition-all placeholder:text-gray-400 text-gray-800 shadow-sm"
@@ -124,9 +128,9 @@ export default function Archive() {
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="w-full pl-11 pr-8 py-3 bg-white/60 backdrop-blur-md border border-white/60 focus:border-pink-300 rounded-2xl text-sm outline-none transition-all text-gray-800 shadow-sm appearance-none cursor-pointer"
             >
-              <option value="all">Semua Bulan</option>
+              <option value="all">{t('all_months')}</option>
               {Array.from({ length: 12 }).map((_, i) => (
-                <option key={i + 1} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM', { locale: id })}</option>
+                <option key={i + 1} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM', { locale: currentLocale })}</option>
               ))}
             </select>
           </div>
@@ -136,7 +140,7 @@ export default function Archive() {
           {filteredArchive.length === 0 ? (
             <div className="text-center py-20 opacity-50 bg-white/40 backdrop-blur-sm rounded-[2rem] border border-white/60 shadow-sm">
               <Calendar className="w-16 h-16 mx-auto text-pink-300 mb-4" />
-              <p className="text-sm italic text-gray-600">Tidak ada pesan yang ditemukan.</p>
+              <p className="text-sm italic text-gray-600">{t('no_results')}</p>
             </div>
           ) : (
             filteredArchive.map((item, idx) => (
@@ -166,7 +170,7 @@ export default function Archive() {
                     "text-[11px] font-bold tracking-wider uppercase",
                     item.isToday ? "text-white" : "text-gray-700"
                   )}>
-                    {format(item.date, 'EEEE, d MMM', { locale: id })}
+                    {format(item.date, 'EEEE, d MMM', { locale: currentLocale })}
                   </span>
                 </div>
                 {item.isToday && (
@@ -185,7 +189,7 @@ export default function Archive() {
                     "text-sm leading-relaxed italic font-medium",
                     item.isToday ? "text-white/90" : "text-gray-800"
                   )}>
-                    "{item.message?.message || "Aku mencintaimu lebih dari kemarin."}"
+                    "{language === 'en' && item.message?.message_en ? item.message.message_en : language === 'zh' && item.message?.message_zh ? item.message.message_zh : (item.message?.message || "Aku mencintaimu lebih dari kemarin.")}"
                   </p>
                   <ChevronRight className={cn("w-4 h-4 flex-shrink-0", item.isToday ? "text-white/40" : "text-pink-300")} />
                 </div>

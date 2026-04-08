@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id, enUS, zhCN } from 'date-fns/locale';
 import { BookOpen, Clock, ArrowLeft, Search, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getUserDiaryArchive } from '../lib/logic';
 import { UserMessage } from '../types';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
+import { useLanguage } from '../lib/LanguageContext';
 
 export default function DiaryHistory() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function DiaryHistory() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('all');
+  const { t } = useLanguage();
 
   const filteredHistory = diaryHistory.filter(item => {
     const matchesSearch = item.content.toLowerCase().includes(searchTerm.toLowerCase());
@@ -43,8 +45,10 @@ export default function DiaryHistory() {
     fetchHistory();
   }, []);
 
+  const currentLocale = language === 'en' ? enUS : language === 'zh' ? zhCN : id;
+
   return (
-    <Layout dateStr={format(new Date(), 'MMMM yyyy', { locale: id })}>
+    <Layout dateStr={format(new Date(), 'MMMM yyyy', { locale: currentLocale })}>
       <div className="space-y-10 py-4">
         <div className="flex items-center justify-between">
           <button 
@@ -56,7 +60,7 @@ export default function DiaryHistory() {
         </div>
 
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">Diary Triana</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('diary_history')}</h1>
           <p className="text-sm text-pink-600 font-medium tracking-wide">Buku harian rahasia milikku.</p>
         </div>
 
@@ -68,7 +72,7 @@ export default function DiaryHistory() {
             </div>
             <input
               type="text"
-              placeholder="Cari curahan hati..."
+              placeholder={t('search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-11 pr-4 py-3 bg-white/60 backdrop-blur-md border border-white/60 focus:border-pink-300 rounded-2xl text-sm outline-none transition-all placeholder:text-gray-400 text-gray-800 shadow-sm"
@@ -83,9 +87,9 @@ export default function DiaryHistory() {
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="w-full pl-11 pr-8 py-3 bg-white/60 backdrop-blur-md border border-white/60 focus:border-pink-300 rounded-2xl text-sm outline-none transition-all text-gray-800 shadow-sm appearance-none cursor-pointer"
             >
-              <option value="all">Semua Bulan</option>
+              <option value="all">{t('all_months')}</option>
               {Array.from({ length: 12 }).map((_, i) => (
-                <option key={i + 1} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM', { locale: id })}</option>
+                <option key={i + 1} value={i + 1}>{format(new Date(2024, i, 1), 'MMMM', { locale: currentLocale })}</option>
               ))}
             </select>
           </div>
@@ -103,7 +107,7 @@ export default function DiaryHistory() {
           ) : filteredHistory.length === 0 ? (
             <div className="text-center py-20 opacity-50 bg-white/40 backdrop-blur-sm rounded-[2rem] border border-white/60 shadow-sm">
               <BookOpen className="w-16 h-16 mx-auto text-pink-300 mb-4" />
-              <p className="text-sm italic text-gray-600">Tidak ada catatan yang ditemukan.</p>
+              <p className="text-sm italic text-gray-600">{t('no_results')}</p>
             </div>
           ) : (
             filteredHistory.map((item, idx) => (
@@ -121,7 +125,7 @@ export default function DiaryHistory() {
                     <Clock className="w-4 h-4" />
                   </div>
                   <span className="text-[10px] font-bold text-pink-500 uppercase tracking-widest">
-                    {format(new Date(item.created_at), 'EEEE, d MMM yyyy, HH:mm', { locale: id })}
+                    {format(new Date(item.created_at), 'EEEE, d MMM yyyy, HH:mm', { locale: currentLocale })}
                   </span>
                 </div>
                 

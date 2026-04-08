@@ -20,7 +20,7 @@ import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
 
 // ─── Toast Notification ───────────────────────────────────────────────────────
-function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
+function Toast({ message, type, onClose }: { key?: string | number; message: string; type: 'success' | 'error'; onClose: () => void }) {
   useEffect(() => {
     const t = setTimeout(onClose, 3000);
     return () => clearTimeout(t);
@@ -93,6 +93,7 @@ export default function AdminDashboard() {
         dataToUpdate.day = parseInt(dataToUpdate.day);
         if (isNaN(dataToUpdate.day)) throw new Error('Hari harus berupa angka!');
         dataToUpdate.month = dataToUpdate.month ? parseInt(dataToUpdate.month) : null;
+        dataToUpdate.year = dataToUpdate.year ? parseInt(dataToUpdate.year) : null;
       } else if (table === 'greetings') {
         if (!dataToUpdate.type || !dataToUpdate.text) throw new Error('Tipe dan Teks sapaan harus diisi!');
       } else if (table === 'themes') {
@@ -167,7 +168,7 @@ export default function AdminDashboard() {
     let data: any[] = [];
     let filename = '';
     if (type === 'messages') {
-      data = [{ day: 1, month: 4, message: 'Contoh pesan romantis...', is_active: true }];
+      data = [{ day: 1, month: 4, year: 2026, message: 'Contoh pesan romantis...', is_active: true }, { day: 2, month: 4, year: null, message: 'Contoh pesan tiap tahun', is_active: true }];
       filename = 'template_pesan_harian.xlsx';
     }
     const ws = XLSX.utils.json_to_sheet(data);
@@ -229,6 +230,7 @@ export default function AdminDashboard() {
         data.day = parseInt(data.day);
         if (isNaN(data.day)) throw new Error('Hari harus berupa angka!');
         data.month = data.month ? parseInt(data.month) : null;
+        data.year = data.year ? parseInt(data.year) : null;
       } else if (activeTab === 'greetings') {
         table = 'greetings';
         if (!data.type || !data.text) throw new Error('Tipe dan Teks sapaan harus diisi!');
@@ -488,6 +490,7 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                           <div className="flex gap-2">
                             <input type="number" value={editData.day || ''} onChange={(e) => setEditData({...editData, day: e.target.value})} className="w-20 p-2 border rounded-lg text-xs" placeholder="Hari" />
                             <input type="number" value={editData.month || ''} onChange={(e) => setEditData({...editData, month: e.target.value})} className="w-20 p-2 border rounded-lg text-xs" placeholder="Bulan" />
+                            <input type="number" value={editData.year || ''} onChange={(e) => setEditData({...editData, year: e.target.value})} className="w-24 p-2 border rounded-lg text-xs" placeholder="Tahun" />
                           </div>
                           <textarea value={editData.message || ''} onChange={(e) => setEditData({...editData, message: e.target.value})} className="w-full p-2 border rounded-lg text-xs min-h-[80px]" />
                           <div className="flex gap-2">
@@ -498,7 +501,7 @@ Tolong format semua ini menjadi jelas agar saya bisa langsung paste ke Admin Das
                       ) : (
                         <div className="space-y-1 flex-1">
                           <span className="px-2 py-0.5 bg-pink-100 text-pink-600 rounded-md text-[10px] font-bold">
-                            Tgl {msg.day}{msg.month ? `/${msg.month}` : ' (Bulanan)'}
+                            Tgl {msg.day}{msg.month ? `/${msg.month}` : ' (Bulanan)'}{msg.year ? ` - Thn ${msg.year}` : ' (Tiap Tahun)'}
                           </span>
                           <p className="text-sm text-gray-600 leading-relaxed">{msg.message}</p>
                         </div>
@@ -1016,14 +1019,18 @@ create policy "Admin all" on themes for all using (true);`}
               <div className="space-y-4">
                 {activeTab === 'messages' && (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hari (1-31) *</label>
-                        <input type="number" onChange={(e) => setNewItemData({...newItemData, day: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="Contoh: 14" />
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hari *</label>
+                        <input type="number" onChange={(e) => setNewItemData({...newItemData, day: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="1-31" />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Bulan (Opsional)</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Bulan</label>
                         <input type="number" onChange={(e) => setNewItemData({...newItemData, month: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="1-12" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tahun</label>
+                        <input type="number" onChange={(e) => setNewItemData({...newItemData, year: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm mt-1 outline-none focus:ring-2 focus:ring-pink-200" placeholder="Contoh: 2026" />
                       </div>
                     </div>
                     <div>

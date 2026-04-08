@@ -16,7 +16,7 @@ export default function DiaryHistory() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('all');
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
 
   const filteredHistory = diaryHistory.filter(item => {
     const matchesSearch = item.content.toLowerCase().includes(searchTerm.toLowerCase());
@@ -55,7 +55,7 @@ export default function DiaryHistory() {
             onClick={() => navigate('/home')}
             className="px-4 py-2 bg-white/40 backdrop-blur-md border border-white/60 text-gray-500 hover:text-pink-500 rounded-2xl transition-all flex items-center gap-2 text-xs font-bold shadow-sm"
           >
-            <ArrowLeft className="w-4 h-4" /> Kembali
+            <ArrowLeft className="w-4 h-4" /> {t('back')}
           </button>
         </div>
 

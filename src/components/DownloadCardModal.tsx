@@ -17,8 +17,24 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
   const [resolution, setResolution] = useState<'2:3' | '9:16'>('2:3');
   const [cardTheme, setCardTheme] = useState<'glass' | 'polaroid' | 'vintage'>('glass');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [base64Bg, setBase64Bg] = useState<string | null>(null);
   
   const cardRef = useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (isOpen && currentBg.startsWith('http')) {
+      fetch(currentBg)
+        .then(res => res.blob())
+        .then(blob => {
+          const reader = new FileReader();
+          reader.onloadend = () => setBase64Bg(reader.result as string);
+          reader.readAsDataURL(blob);
+        })
+        .catch(err => console.error('Failed to convert bg to base64:', err));
+    } else {
+      setBase64Bg(currentBg);
+    }
+  }, [isOpen, currentBg]);
 
   const handleDownload = async () => {
     if (!cardRef.current || !(window as any).html2canvas) {
@@ -48,9 +64,9 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
       link.click();
       
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to download card:', err);
-      alert('Maaf, terjadi kesalahan saat mengunduh gambar. Pastikan koneksi internet stabil.');
+      alert('Maaf, terjadi kesalahan: ' + (err.message || err.toString()) + '\n\nSilakan coba lagi.');
     } finally {
       setIsDownloading(false);
     }
@@ -63,9 +79,10 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
 
   // Background style based on theme
   const getBackgroundStyle = () => {
+    const bgToUse = base64Bg || currentBg;
     if (cardTheme === 'glass') {
       return {
-        backgroundImage: currentBg.startsWith('http') ? `url(${currentBg})` : currentBg,
+        backgroundImage: bgToUse.startsWith('http') || bgToUse.startsWith('data:') ? `url(${bgToUse})` : bgToUse,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       };
@@ -141,10 +158,10 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                 <div className="flex-1 flex flex-col items-center justify-center p-16">
                   <div className="w-[800px] bg-white p-12 pb-32 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] transform -rotate-2 relative border border-gray-200">
                     <div className="w-full aspect-[4/3] bg-pink-100 mb-16 flex items-center justify-center relative overflow-hidden shadow-inner">
-                      {currentBg.startsWith('http') ? (
-                         <img src={currentBg} crossOrigin="anonymous" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply" alt="bg" />
+                      {(base64Bg || currentBg).startsWith('http') || (base64Bg || currentBg).startsWith('data:') ? (
+                         <img src={base64Bg || currentBg} crossOrigin="anonymous" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply" alt="bg" />
                       ) : (
-                         <div className="absolute inset-0" style={{ background: currentBg, opacity: 0.3 }} />
+                         <div className="absolute inset-0" style={{ background: base64Bg || currentBg, opacity: 0.3 }} />
                       )}
                       
                       <div className="relative z-10 text-center px-16">

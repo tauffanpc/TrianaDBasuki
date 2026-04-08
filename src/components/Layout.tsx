@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Heart, LogOut, X, Sparkles, Menu, BookOpen, Archive as ArchiveIcon, Home } from 'lucide-react';
+import { Heart, LogOut, X, Sparkles, Menu, BookOpen, Archive as ArchiveIcon, Home, Globe } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { AnimatePresence } from 'motion/react';
 import { getSupabase } from '../lib/supabase';
 import { Theme } from '../types';
 import { DEFAULT_THEMES, getDefaultThemeForToday } from '../constants';
+import { useLanguage } from '../lib/LanguageContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -99,6 +100,7 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
   const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [currentTheme, setCurrentTheme] = React.useState<Partial<Theme>>(getDefaultThemeForToday());
+  const { language, setLanguage, t } = useLanguage();
 
   React.useEffect(() => {
     const applyTheme = (theme: Partial<Theme>) => {
@@ -243,16 +245,31 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
           </div>
         </Link>
 
-        {!isAdmin && (
-          <div className="flex flex-col items-end text-[9px] text-[var(--primary-color)] font-bold uppercase tracking-[0.15em]">
-            <span className="opacity-50">{dateStr}</span>
-            {dayCounter !== undefined && (
-              <span className="bg-[var(--primary-color)]/80 text-white px-2 py-0.5 rounded-full mt-1 shadow-sm">
-                Day {dayCounter}
-              </span>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => {
+              const nextLang = language === 'id' ? 'en' : language === 'en' ? 'zh' : 'id';
+              setLanguage(nextLang);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/60 backdrop-blur-md rounded-full shadow-sm hover:bg-pink-50 transition-colors border border-pink-100 group"
+          >
+            <Globe className="w-4 h-4 text-[var(--primary-color)] font-bold group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] font-bold text-[var(--primary-color)] uppercase tracking-widest hidden sm:inline">
+              {language === 'en' ? 'Language' : language === 'id' ? 'Bahasa' : '语言'}
+            </span>
+          </button>
+
+          {!isAdmin && (
+            <div className="flex flex-col items-end text-[9px] text-[var(--primary-color)] font-bold uppercase tracking-[0.15em]">
+              <span className="opacity-50">{dateStr}</span>
+              {dayCounter !== undefined && (
+                <span className="bg-[var(--primary-color)]/80 text-white px-2 py-0.5 rounded-full mt-1 shadow-sm">
+                  Day {dayCounter}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </header>
 
       <main className={cn(
@@ -294,7 +311,7 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
                     onClick={() => { setIsMenuOpen(false); navigate('/home'); }}
                     className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-pink-50 transition-all border border-pink-100 group"
                   >
-                    <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">Beranda</span>
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">{t('home')}</span>
                     <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 group-hover:scale-110 transition-transform">
                       <Home className="w-4 h-4" />
                     </div>
@@ -304,7 +321,7 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
                     onClick={() => { setIsMenuOpen(false); navigate('/archive'); }}
                     className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-pink-50 transition-all border border-pink-100 group"
                   >
-                    <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">Arsip Pesan</span>
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">{t('archive')}</span>
                     <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 group-hover:scale-110 transition-transform">
                       <ArchiveIcon className="w-4 h-4" />
                     </div>
@@ -314,7 +331,7 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
                     onClick={() => { setIsMenuOpen(false); navigate('/diary-history'); }}
                     className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-pink-50 transition-all border border-pink-100 group"
                   >
-                    <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">Riwayat Diary</span>
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-pink-600 transition-colors">{t('diary_history')}</span>
                     <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 group-hover:scale-110 transition-transform">
                       <BookOpen className="w-4 h-4" />
                     </div>
@@ -324,7 +341,7 @@ export default function Layout({ children, dayCounter, dateStr, customBg, fullWi
                     onClick={() => { setIsMenuOpen(false); setIsLogoutModalOpen(true); }}
                     className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:bg-red-50 transition-all border border-red-100 group"
                   >
-                    <span className="text-xs font-bold text-gray-700 group-hover:text-red-500 transition-colors">Keluar</span>
+                    <span className="text-xs font-bold text-gray-700 group-hover:text-red-500 transition-colors">{t('logout')}</span>
                     <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
                       <LogOut className="w-4 h-4" />
                     </div>

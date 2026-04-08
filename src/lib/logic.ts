@@ -13,28 +13,45 @@ export function getCurrentWitaDate(previewDate?: string | null) {
 export async function getDailyMessage(date: Date) {
   const day = date.getDate();
   const month = date.getMonth() + 1;
+  const year = date.getFullYear();
   const supabase = getSupabase();
 
   try {
-    // Prioritize exact match (day + month)
-    const { data: exactMatch, error: exactError } = await supabase
+    // 1. Prioritize exact match (day + month + year)
+    const { data: exactYearMatch } = await supabase
       .from('messages')
       .select('*')
       .eq('day', day)
       .eq('month', month)
+      .eq('year', year)
       .eq('is_active', true)
-      .order('created_at', { ascending: false }) // Ambil yang terbaru jika duplikat
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (exactYearMatch) return exactYearMatch as Message;
+
+    // 2. Prioritize exact match without year (day + month, year = null)
+    const { data: exactMatch } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('day', day)
+      .eq('month', month)
+      .is('year', null)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (exactMatch) return exactMatch as Message;
 
-    // Fallback to day only (recurring monthly)
-    const { data: dayMatch, error: dayError } = await supabase
+    // 3. Fallback to recurring monthly (day only, month = null, year = null)
+    const { data: dayMatch } = await supabase
       .from('messages')
       .select('*')
       .eq('day', day)
       .is('month', null)
+      .is('year', null)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)

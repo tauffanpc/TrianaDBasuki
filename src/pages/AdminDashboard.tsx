@@ -60,6 +60,9 @@ export default function AdminDashboard() {
   const [isThemesTableMissing, setIsThemesTableMissing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
+  const [importPreviewData, setImportPreviewData] = useState<any[]>([]);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importTable, setImportTable] = useState<string>('');
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -264,16 +267,95 @@ export default function AdminDashboard() {
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
-        const supabase = getSupabase();
-        const { error: importError } = await supabase.from(table).insert(data);
-        if (importError) throw importError;
-        showToast('Import berhasil! 🎉');
-        fetchData();
+        setImportPreviewData(data);
+        setImportTable(table);
+        setIsImportModalOpen(true);
       } catch (err: any) {
         showToast('Gagal import: ' + err.message, 'error');
       }
     };
     reader.readAsBinaryString(file);
+    e.target.value = ''; // Reset file input
+  };
+
+  const handleTranslateAllImport = async () => {
+    setIsTranslating(true);
+    showToast('Sedang menerjemahkan secara massal...', 'success');
+    let hasError = false;
+    try {
+      // Use a for...of loop to translate sequentially and avoid rate-limits
+      const translatedData = [];
+      for (const row of importPreviewData) {
+        const newRow = { ...row };
+        try {
+          if (importTable === 'messages' && newRow.message) {
+            if (!newRow.message_en) newRow.message_en = await translateText(newRow.message, 'en');
+            if (!newRow.message_zh) newRow.message_zh = await translateText(newRow.message, 'zh-CN');
+          } else if (importTable === 'greetings' && newRow.text) {
+            if (!newRow.text_en) newRow.text_en = await translateText(newRow.text, 'en');
+            if (!newRow.text_zh) newRow.text_zh = await translateText(newRow.text, 'zh-CN');
+          }
+        } catch (e) {
+          hasError = true;
+          console.error("Translation failed for row: ", row, e);
+        }
+        newRow.is_active = newRow.is_active !== undefined ? newRow.is_active : true;
+        translatedData.push(newRow);
+      }
+      setImportPreviewData(translatedData);
+      if (hasError) {
+        showToast('Translasi massal selesai dengan beberapa kegagalan.', 'error');
+      } else {
+        showToast('Translasi massal selesai! ✨', 'success');
+      }
+    } catch (err: any) {
+      showToast('Gagal translasi: ' + err.message, 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleSaveImport = async () => {
+    try {
+      const supabase = getSupabase();
+      
+      // Ensure specific numbers for numbers
+      const sanitizedData = importPreviewData.map(row => {
+          const r = { ...row };
+          if (importTable === 'messages') {
+              r.day = parseInt(r.day);
+              if (r.month) r.month = parseInt(r.month);
+              if (r.year) r.year = parseInt(r.year);
+          }
+          return r;
+      });
+
+      const { error: importError } = await supabase.from(importTable).insert(sanitizedData);
+      if (importError) {
+        // Fallback for year property mismatch in DB schema
+        if (importTable === 'messages') {
+          const safeData = sanitizedData.map(r => {
+             const { year, ...rest } = r;
+             return rest;
+          });
+          const fbRes = await supabase.from(importTable).insert(safeData);
+          if (!fbRes.error) {
+              showToast('Data massal berhasil disimpan! 🎉 (Tahun diabaikan)');
+              setIsImportModalOpen(false);
+              setImportPreviewData([]);
+              fetchData();
+              return;
+          }
+        }
+        throw importError;
+      }
+      showToast('Data massal berhasil disimpan! 🎉');
+      setIsImportModalOpen(false);
+      setImportPreviewData([]);
+      fetchData();
+    } catch (err: any) {
+      showToast('Gagal import ke database: ' + err.message, 'error');
+    }
   };
 
   const handleDelete = async (id: string, table: string) => {
@@ -1242,6 +1324,105 @@ create policy "Admin all" on themes for all using (true);`}
           </div>
         )}
       </AnimatePresence>
+
+      {/* Import & Translate Bulk Modal */}
+      <AnimatePresence>
+        {isImportModalOpen && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsImportModalOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative bg-white rounded-[2rem] p-8 max-w-4xl w-full max-h-[85vh] overflow-y-auto shadow-2xl flex flex-col"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 border-b-2 border-pink-100 pb-2 inline-block">Review Data Import</h3>
+                  <p className="text-xs text-gray-500 mt-2">Periksa data Excel dan klik "Translate All" untuk mendapatkan 3 bahasa sebelum menyimpan.</p>
+                </div>
+                <button onClick={() => setIsImportModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="overflow-auto border border-gray-100 rounded-xl mb-6 shadow-inner max-h-[50vh]">
+                <table className="w-full text-left text-xs text-gray-600">
+                  <thead className="text-[10px] uppercase bg-gray-50 text-gray-400 sticky top-0 z-10 shadow-sm border-b border-gray-200">
+                    <tr>
+                      {importTable === 'messages' && (
+                        <>
+                          <th className="px-4 py-3">Hari</th>
+                          <th className="px-4 py-3">Bulan</th>
+                          <th className="px-4 py-3">Pesan (ID)</th>
+                          <th className="px-4 py-3 border-l text-blue-500">Pesan (EN)</th>
+                          <th className="px-4 py-3 border-l text-red-500">Pesan (ZH)</th>
+                        </>
+                      )}
+                      {importTable === 'greetings' && (
+                        <>
+                          <th className="px-4 py-3">Tipe</th>
+                          <th className="px-4 py-3">Teks (ID)</th>
+                          <th className="px-4 py-3 border-l text-blue-500">Teks (EN)</th>
+                          <th className="px-4 py-3 border-l text-red-500">Teks (ZH)</th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importPreviewData.map((row, idx) => (
+                      <tr key={idx} className="border-b border-gray-50 hover:bg-pink-50/30 transition-colors">
+                        {importTable === 'messages' && (
+                          <>
+                            <td className="px-4 py-3 font-bold whitespace-nowrap">{row.day}</td>
+                            <td className="px-4 py-3">{row.month || '-'}</td>
+                            <td className="px-4 py-3 min-w-[200px]">{row.message}</td>
+                            <td className="px-4 py-3 min-w-[200px] border-l italic text-blue-800">{row.message_en || <span className="opacity-30">Belum ada</span>}</td>
+                            <td className="px-4 py-3 min-w-[200px] border-l italic text-red-800">{row.message_zh || <span className="opacity-30">Belum ada</span>}</td>
+                          </>
+                        )}
+                        {importTable === 'greetings' && (
+                          <>
+                            <td className="px-4 py-3 font-bold">{row.type}</td>
+                            <td className="px-4 py-3 min-w-[200px]">{row.text}</td>
+                            <td className="px-4 py-3 min-w-[200px] border-l italic text-blue-800">{row.text_en || <span className="opacity-30">Belum ada</span>}</td>
+                            <td className="px-4 py-3 min-w-[200px] border-l italic text-red-800">{row.text_zh || <span className="opacity-30">Belum ada</span>}</td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex gap-4 mt-auto">
+                <button
+                  onClick={handleTranslateAllImport}
+                  disabled={isTranslating}
+                  className="flex-1 py-4 bg-indigo-50 text-indigo-600 rounded-2xl font-bold text-sm shadow-sm hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 border border-indigo-100 disabled:opacity-50"
+                >
+                  <Sparkles className="w-5 h-5" /> 
+                  {isTranslating ? 'Sedang Menerjemahkan...' : 'Translate Semua Data 🪄'}
+                </button>
+                <button
+                  onClick={handleSaveImport}
+                  disabled={isTranslating}
+                  className="flex-1 py-4 bg-pink-500 text-white rounded-2xl font-bold text-sm shadow-xl shadow-pink-200/50 hover:bg-pink-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  Simpan ke Database
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </Layout>
   );
 }

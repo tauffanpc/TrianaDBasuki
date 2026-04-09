@@ -57,24 +57,10 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
     const scrollY = window.scrollY;
     
     try {
-      // Simpan state original untuk preview UI
-      const originalTransform = cardRef.current.style.transform;
-      const originalPosition = cardRef.current.style.position;
-      const originalMargin = cardRef.current.style.margin;
-      const originalWidth = cardRef.current.style.width;
-      const originalHeight = cardRef.current.style.height;
-
-      // PAKSA UKURAN ASLI 1:1 UNTUK CAPTURE (Tanpa Scale)
-      cardRef.current.style.transform = 'none';
-      cardRef.current.style.position = 'fixed';
-      cardRef.current.style.top = '0';
-      cardRef.current.style.left = '0';
-      cardRef.current.style.width = `${w}px`;
-      cardRef.current.style.height = `${h}px`;
-      cardRef.current.style.zIndex = '-9999';
-      cardRef.current.style.margin = '0';
+      const originalCard = cardRef.current;
       
-      const canvas = await (window as any).html2canvas(cardRef.current, {
+      // PAKSA UKURAN ASLI 1:1 UNTUK CAPTURE (Tanpa Scale)
+      const canvas = await (window as any).html2canvas(originalCard, {
         scale: 2, 
         useCORS: true,
         allowTaint: false,
@@ -85,32 +71,56 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         windowHeight: h,
         onclone: (clonedDoc: any) => {
           try {
-            // == 1. NUCLEAR CSS OVERRIDE ==
-            // Suntikkan gaya yang memaksa HEX/RGB dan mematikan animasi
-            const nuclearStyle = clonedDoc.createElement('style');
-            nuclearStyle.textContent = `
-              /* Blokir seluruh kode warna oklab/oklch dari Tailwind v4 */
-              :root {
-                --color-pink-500: #ec4899 !important;
-                --color-pink-600: #db2777 !important;
-                --color-pink-400: #f472b6 !important;
-                --color-rose-400: #fb7185 !important;
-                --color-gray-900: #111827 !important;
-                --color-gray-800: #1f2937 !important;
-                --color-gray-500: #6b7280 !important;
-              }
+            // == QUANTUM FIX: FORCE INLINE SANITIZED STYLES ==
+            // Pilih kartu di dokumen kloning
+            const clonedCard = clonedDoc.getElementById('card-capture-target');
+            if (clonedCard) {
+              // Fungsi untuk menyalin gaya komputasi secara rekursif & membersihkan oklab
+              const inlineAndSanitizeStyles = (sourceEl: HTMLElement, targetEl: HTMLElement) => {
+                const computed = window.getComputedStyle(sourceEl);
+                let cssText = '';
+                
+                // Ambil daftar properti penting saja untuk efisiensi
+                const props = [
+                  'background-color', 'background-image', 'background-size', 'background-position',
+                  'color', 'font-family', 'font-size', 'font-weight', 'font-style', 'letter-spacing',
+                  'line-height', 'text-align', 'text-transform', 'text-shadow',
+                  'display', 'flex-direction', 'justify-content', 'items-center', 'gap',
+                  'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+                  'margin', 'border', 'border-radius', 'border-width', 'border-color',
+                  'width', 'height', 'min-width', 'min-height', 'max-width', 'max-height',
+                  'opacity', 'box-shadow', 'backdrop-filter', 'mask-image', 'transform',
+                  'position', 'top', 'bottom', 'left', 'right', 'z-index'
+                ];
 
-              /* Matikan animasi & transisi agar capture statis sempurna */
-              * {
-                animation: none !important;
-                transition: none !important;
-                animation-delay: 0s !important;
-                animation-duration: 0s !important;
-              }
+                props.forEach(prop => {
+                  let val = computed.getPropertyValue(prop);
+                  if (val && (val.includes('oklch') || val.includes('oklab'))) {
+                    // Fallback cerdas: jika pinky tetap pink, lainnya default neutral
+                    if (val.includes('0.5') || val.includes('0.6')) val = '#ec4899';
+                    else if (val.includes('0.9')) val = '#ffffff';
+                    else val = '#ec4899'; 
+                  }
+                  if (val) cssText += `${prop}: ${val} !important; `;
+                });
 
-              /* Paksa kontainer kartu ke lebar absolut 1080px (Anti-Narrow) */
-              #card-capture-target {
-                display: block !important;
+                targetEl.style.cssText = cssText;
+                
+                // Rekursif untuk semua anak
+                for (let i = 0; i < sourceEl.children.length; i++) {
+                  if (targetEl.children[i]) {
+                    inlineAndSanitizeStyles(sourceEl.children[i] as HTMLElement, targetEl.children[i] as HTMLElement);
+                  }
+                }
+              };
+
+              // Jalankan inlining mulai dari kartu utama
+              inlineAndSanitizeStyles(originalCard, clonedCard);
+
+              // Paksa layout capture agar tidak terpotong (Anti-Narrow)
+              clonedCard.style.cssText += `
+                display: flex !important;
+                flex-direction: column !important;
                 width: ${w}px !important;
                 min-width: ${w}px !important;
                 height: ${h}px !important;
@@ -118,54 +128,27 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                 transform: none !important;
                 position: relative !important;
                 margin: 0 !important;
-                padding: 0 !important;
-                left: 0 !important;
                 top: 0 !important;
-              }
-
-              /* Fallback paksa untuk elemen yang mungkin masih pakai oklab */
-              [style*="oklch"], [style*="oklab"] {
-                color: #ec4899 !important;
-                background-color: transparent !important;
-              }
-            `;
-            clonedDoc.head.appendChild(nuclearStyle);
-
-            // == 2. STYLESHEET CLEANUP ==
-            // Loop melalui semua elemen style dan bersihkan teks oklab secara manual
-            const allStyles = clonedDoc.querySelectorAll('style');
-            allStyles.forEach((styleTag: any) => {
-              if (styleTag !== nuclearStyle && styleTag.textContent) {
-                styleTag.textContent = styleTag.textContent
-                  .replace(/oklch\([^)]+\)/g, '#ec4899')
-                  .replace(/oklab\([^)]+\)/g, '#ec4899');
-              }
-            });
-
-            // == 3. LAYOUT FIX (FINAL TOUCH) ==
-            const clonedCard = clonedDoc.getElementById('card-capture-target');
-            if (clonedCard) {
-               clonedCard.style.transform = 'none';
-               clonedCard.style.position = 'relative';
-               clonedCard.style.width = `${w}px`;
-               clonedCard.style.height = `${h}px`;
+                left: 0 !important;
+              `;
             }
+
+            // == NUCLEAR CLEANUP ==
+            // Hapus SEMUA tag link (Tailwind dll) dari kloning agar tidak di-parse oleh html2canvas
+            // Karena gaya sudah "ditempel" secara inline, tampilan kartu tetap aman.
+            const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
+            links.forEach((link: any) => link.remove());
+            
+            // Bersihkan semua tag style bawaan yang mungkin berisi oklab
+            const styles = clonedDoc.querySelectorAll('style');
+            styles.forEach((style: any) => style.remove());
+            
           } catch (e) {
-            console.error('onclone error:', e);
+            console.error('Quantum onclone error:', e);
           }
         }
       });
 
-      // Kembalikan ke state UI semula
-      cardRef.current.style.transform = originalTransform;
-      cardRef.current.style.position = originalPosition;
-      cardRef.current.style.width = originalWidth;
-      cardRef.current.style.height = originalHeight;
-      cardRef.current.style.top = '';
-      cardRef.current.style.left = '';
-      cardRef.current.style.zIndex = '';
-      cardRef.current.style.margin = originalMargin;
-      
       window.scrollTo(scrollX, scrollY);
 
       const image = canvas.toDataURL('image/png');

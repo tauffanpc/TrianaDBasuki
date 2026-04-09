@@ -26,6 +26,9 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
   const currentGreetingText = language === 'en' && greeting?.text_en ? greeting.text_en : language === 'zh' && greeting?.text_zh ? greeting.text_zh : greeting?.text;
   
   const cardRef = useRef<HTMLDivElement>(null);
+  
+  const w = 1080;
+  const h = resolution === '9:16' ? 1920 : 1620;
 
   React.useEffect(() => {
     if (isOpen && currentBg.startsWith('http')) {
@@ -62,9 +65,6 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
       const originalHeight = cardRef.current.style.height;
 
       // PAKSA UKURAN ASLI 1:1 UNTUK CAPTURE (Tanpa Scale)
-      const w = 1080;
-      const h = resolution === '9:16' ? 1920 : 1620;
-      
       cardRef.current.style.transform = 'none';
       cardRef.current.style.position = 'fixed';
       cardRef.current.style.top = '0';

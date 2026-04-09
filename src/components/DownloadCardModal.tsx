@@ -143,12 +143,6 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
           }
         }
       });
-            
-          } catch (e) {
-            console.error('Quantum onclone error:', e);
-          }
-        }
-      });
 
       window.scrollTo(scrollX, scrollY);
 

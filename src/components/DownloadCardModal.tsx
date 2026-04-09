@@ -61,7 +61,7 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
       
       // PAKSA UKURAN ASLI 1:1 UNTUK CAPTURE (Tanpa Scale)
       const canvas = await (window as any).html2canvas(originalCard, {
-        scale: 2, 
+        scale: 3, // Kualitas ultra tajam
         useCORS: true,
         allowTaint: false,
         backgroundColor: null,
@@ -71,53 +71,38 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         windowHeight: h,
         onclone: (clonedDoc: any) => {
           try {
-            // == QUANTUM FIX: FORCE INLINE SANITIZED STYLES ==
-            // Pilih kartu di dokumen kloning
+            // == 1. FULL STYLE INLINING (PRECISION) ==
             const clonedCard = clonedDoc.getElementById('card-capture-target');
             if (clonedCard) {
-              // Fungsi untuk menyalin gaya komputasi secara rekursif & membersihkan oklab
-              const inlineAndSanitizeStyles = (sourceEl: HTMLElement, targetEl: HTMLElement) => {
+              const inlineAllStyles = (sourceEl: HTMLElement, targetEl: HTMLElement) => {
                 const computed = window.getComputedStyle(sourceEl);
-                let cssText = '';
                 
-                // Ambil daftar properti penting saja untuk efisiensi
-                const props = [
-                  'background-color', 'background-image', 'background-size', 'background-position',
-                  'color', 'font-family', 'font-size', 'font-weight', 'font-style', 'letter-spacing',
-                  'line-height', 'text-align', 'text-transform', 'text-shadow',
-                  'display', 'flex-direction', 'justify-content', 'items-center', 'gap',
-                  'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
-                  'margin', 'border', 'border-radius', 'border-width', 'border-color',
-                  'width', 'height', 'min-width', 'min-height', 'max-width', 'max-height',
-                  'opacity', 'box-shadow', 'backdrop-filter', 'mask-image', 'transform',
-                  'position', 'top', 'bottom', 'left', 'right', 'z-index'
-                ];
-
-                props.forEach(prop => {
+                // Salin SEMUA properti yang tersedia
+                for (let i = 0; i < computed.length; i++) {
+                  const prop = computed[i];
                   let val = computed.getPropertyValue(prop);
+                  
+                  // Sanitasi oklab tetap wajib agar tidak crash
                   if (val && (val.includes('oklch') || val.includes('oklab'))) {
-                    // Fallback cerdas: jika pinky tetap pink, lainnya default neutral
                     if (val.includes('0.5') || val.includes('0.6')) val = '#ec4899';
                     else if (val.includes('0.9')) val = '#ffffff';
-                    else val = '#ec4899'; 
+                    else val = '#ec4899';
                   }
-                  if (val) cssText += `${prop}: ${val} !important; `;
-                });
-
-                targetEl.style.cssText = cssText;
+                  
+                  if (val) targetEl.style.setProperty(prop, val, 'important');
+                }
                 
                 // Rekursif untuk semua anak
                 for (let i = 0; i < sourceEl.children.length; i++) {
                   if (targetEl.children[i]) {
-                    inlineAndSanitizeStyles(sourceEl.children[i] as HTMLElement, targetEl.children[i] as HTMLElement);
+                    inlineAllStyles(sourceEl.children[i] as HTMLElement, targetEl.children[i] as HTMLElement);
                   }
                 }
               };
 
-              // Jalankan inlining mulai dari kartu utama
-              inlineAndSanitizeStyles(originalCard, clonedCard);
+              inlineAllStyles(originalCard, clonedCard);
 
-              // Paksa layout capture agar tidak terpotong (Anti-Narrow)
+              // Paksa layout absolut agar tidak terpengaruh sisa CSS
               clonedCard.style.cssText += `
                 display: flex !important;
                 flex-direction: column !important;
@@ -130,18 +115,34 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                 margin: 0 !important;
                 top: 0 !important;
                 left: 0 !important;
+                overflow: hidden !important;
               `;
             }
 
-            // == NUCLEAR CLEANUP ==
-            // Hapus SEMUA tag link (Tailwind dll) dari kloning agar tidak di-parse oleh html2canvas
-            // Karena gaya sudah "ditempel" secara inline, tampilan kartu tetap aman.
-            const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
-            links.forEach((link: any) => link.remove());
+            // == 2. SMART CLEANUP (TAHAN FONT) ==
+            // Hanya hapus stylesheet yang bukan Font
+            const links = Array.from(clonedDoc.querySelectorAll('link[rel="stylesheet"]'));
+            links.forEach((link: any) => {
+              const href = link.getAttribute('href') || '';
+              // JANGAN hapus jika itu Google Fonts atau font eksternal
+              if (!href.includes('fonts.googleapis') && !href.includes('fonts.gstatic') && !href.includes('font')) {
+                link.remove();
+              }
+            });
             
-            // Bersihkan semua tag style bawaan yang mungkin berisi oklab
-            const styles = clonedDoc.querySelectorAll('style');
-            styles.forEach((style: any) => style.remove());
+            // Hapus tag style internal (Tailwind hasil build) yang mengandung oklab
+            const styles = Array.from(clonedDoc.querySelectorAll('style'));
+            styles.forEach((style: any) => {
+              if (style.textContent && (style.textContent.includes('oklch') || style.textContent.includes('oklab'))) {
+                style.remove();
+              }
+            });
+            
+          } catch (e) {
+            console.error('Perfect Preview error:', e);
+          }
+        }
+      });
             
           } catch (e) {
             console.error('Quantum onclone error:', e);

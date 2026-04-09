@@ -85,21 +85,27 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
         windowHeight: h,
         onclone: (clonedDoc: any) => {
           try {
-            // FIX FATAL: Hapus format warna oklab/oklch dari seluruh dokumen kloning
-            // Ini mencegah crash pada html2canvas
-            const styleSheets = Array.from(clonedDoc.styleSheets);
-            styleSheets.forEach((sheet: any) => {
-              try {
-                const rules = Array.from(sheet.cssRules);
-                rules.forEach((rule: any) => {
-                  if (rule.cssText && (rule.cssText.includes('oklab') || rule.cssText.includes('oklch'))) {
-                    // Paksa warna fallback standar (Pink Tailwind)
-                    rule.style.cssText = rule.style.cssText
-                      .replace(/oklab\([^)]+\)/g, '#ec4899') 
-                      .replace(/oklch\([^)]+\)/g, '#ec4899');
-                  }
-                });
-              } catch (e) {}
+            // FIX FATAL: Aggressively strip oklab/oklch from ALL <style> tags
+            // This is the only way to prevent html2canvas internal parser from crashing
+            const allStyles = clonedDoc.querySelectorAll('style');
+            allStyles.forEach((styleTag: any) => {
+              if (styleTag.textContent) {
+                styleTag.textContent = styleTag.textContent
+                  .replace(/oklch\([^)]+\)/g, '#ec4899')
+                  .replace(/oklab\([^)]+\)/g, '#ec4899')
+                  .replace(/color\([^)]+\)/g, '#ec4899');
+              }
+            });
+
+            // Clean up inline styles for all elements in the cloned document
+            const allElements = clonedDoc.querySelectorAll('*');
+            allElements.forEach((el: any) => {
+              const styleAttr = el.getAttribute('style') || '';
+              if (styleAttr.includes('oklch') || styleAttr.includes('oklab')) {
+                el.style.cssText = el.style.cssText
+                  .replace(/oklch\([^)]+\)/g, '#ec4899')
+                  .replace(/oklab\([^)]+\)/g, '#ec4899');
+              }
             });
 
             // Temukan kartu di dokumen kloning
@@ -110,17 +116,6 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                clonedCard.style.top = 'auto';
                clonedCard.style.left = 'auto';
             }
-
-            // Bersihkan sisa oklab di elemen inline
-            const elements = clonedDoc.querySelectorAll('*');
-            elements.forEach((el: any) => {
-              const styleAttr = el.getAttribute('style') || '';
-              if (styleAttr.includes('oklab') || styleAttr.includes('oklch')) {
-                 el.style.cssText = el.style.cssText
-                   .replace(/oklab\([^)]+\)/g, '#ec4899')
-                   .replace(/oklch\([^)]+\)/g, '#ec4899');
-              }
-            });
           } catch (e) {
             console.error('onclone error:', e);
           }

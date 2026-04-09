@@ -254,9 +254,13 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                       </p>
                     </div>
                     <div className="mt-14 w-48 h-1.5 bg-gradient-to-r from-transparent via-[#f472b6] to-transparent rounded-full" />
-                    <div className="mt-10 flex flex-col items-center">
-                      <p className="text-[28px] font-bold tracking-[0.4em] uppercase opacity-50 block leading-normal" style={{ color: '#be185d' }}>Triana's Daily Love</p>
-                      <p className="text-[20px] font-semibold italic block mt-2 leading-relaxed" style={{ color: '#db2777' }}>{format(new Date(), 'd MMMM yyyy', {locale: currentLocale})}</p>
+                    <div className="mt-10 flex flex-col items-center text-center">
+                      <div style={{ color: '#be185d' }} className="text-[24px] font-bold tracking-[0.3em] uppercase opacity-50 whitespace-nowrap leading-[1.6]">
+                        Triana's Daily Love
+                      </div>
+                      <div style={{ color: '#db2777' }} className="text-[20px] font-semibold italic mt-4 leading-normal">
+                        {format(new Date(), 'd MMMM yyyy', {locale: currentLocale})}
+                      </div>
                     </div>
                   </div>
                 </div>

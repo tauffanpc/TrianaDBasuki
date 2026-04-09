@@ -234,40 +234,44 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
             >
               {cardTheme === 'glass' && (
                 <div className="absolute inset-x-8 inset-y-16 flex flex-col items-center justify-center">
-                  <div className="w-[85%] bg-white/30 backdrop-blur-3xl rounded-[4rem] border-4 border-white/60 p-20 flex flex-col items-center text-center shadow-2xl" style={{ boxShadow: '0 25px 50px -12px rgba(236,72,153,0.2)' }}>
-                    <Heart className="w-24 h-24 animate-pulse mb-8" style={{ color: '#ec4899', fill: '#ec4899' }} />
-                    <h2 className="text-5xl font-display italic mb-16 px-8" style={{ color: '#111827' }}>
+                  <div className="w-[88%] bg-white/35 backdrop-blur-3xl rounded-[4rem] border-4 border-white/60 p-16 md:p-24 flex flex-col items-center text-center shadow-2xl overflow-hidden" style={{ boxShadow: '0 30px 60px -12px rgba(236,72,153,0.25)' }}>
+                    <Heart className="w-20 h-20 animate-pulse mb-10" style={{ color: '#ec4899', fill: '#ec4899' }} />
+                    <h2 className="text-[3.5rem] leading-tight font-display italic mb-12 px-8" style={{ color: '#111827' }}>
                       "{currentGreetingText || t('for_my_love')}"
                     </h2>
-                    <p className="text-4xl leading-relaxed font-serif px-8" style={{ color: '#1f2937' }}>
-                      {currentMessageText || t('no_message_today')}
-                    </p>
-                    <div className="mt-20 w-40 h-2 bg-gradient-to-r from-transparent to-transparent rounded-full" style={{ backgroundImage: 'linear-gradient(to right, transparent, #f472b6, transparent)' }} />
-                    <p className="mt-12 text-3xl font-bold tracking-[0.3em] uppercase opacity-60" style={{ color: '#be185d' }}>Triana's Daily Love</p>
-                    <p className="mt-4 text-2xl font-medium" style={{ color: '#db2777' }}>{format(new Date(), 'd MMMM yyyy', {locale: currentLocale})}</p>
+                    <div className="flex-1 flex items-center justify-center py-6">
+                      <p className="text-[2.75rem] leading-relaxed font-serif px-10 italic" style={{ color: '#1f2937' }}>
+                        {currentMessageText || t('no_message_today')}
+                      </p>
+                    </div>
+                    <div className="mt-14 w-48 h-1.5 bg-gradient-to-r from-transparent via-[#f472b6] to-transparent rounded-full" />
+                    <p className="mt-10 text-[1.75rem] font-bold tracking-[0.4em] uppercase opacity-50" style={{ color: '#be185d' }}>Triana's Daily Love</p>
+                    <p className="mt-2 text-xl font-semibold italic" style={{ color: '#db2777' }}>{format(new Date(), 'd MMMM yyyy', {locale: currentLocale})}</p>
                   </div>
                 </div>
               )}
 
               {cardTheme === 'polaroid' && (
                 <div className="flex-1 flex flex-col items-center justify-center p-16">
-                  <div className="w-[800px] p-12 pb-32 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] transform -rotate-2 relative border" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb' }}>
-                    <div className="w-full aspect-[4/3] mb-16 flex items-center justify-center relative overflow-hidden shadow-inner" style={{ backgroundColor: '#fce7f3' }}>
+                  <div className="w-[820px] p-10 pb-28 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.35)] transform -rotate-1 relative border-4 border-white" style={{ backgroundColor: '#ffffff' }}>
+                    <div className="w-full aspect-[4/3] mb-12 flex items-center justify-center relative overflow-hidden shadow-inner bg-gray-50">
                       {(base64Bg || currentBg).startsWith('http') || (base64Bg || currentBg).startsWith('data:') ? (
-                         <img src={base64Bg || currentBg} crossOrigin="anonymous" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply" alt="bg" />
+                         <img src={base64Bg || currentBg} crossOrigin="anonymous" className="absolute inset-0 w-full h-full object-cover opacity-70 mix-blend-multiply" alt="bg" />
                       ) : (
-                         <div className="absolute inset-0" style={{ background: base64Bg || currentBg, opacity: 0.3 }} />
+                         <div className="absolute inset-0" style={{ background: base64Bg || currentBg, opacity: 0.2 }} />
                       )}
                       
                       <div className="relative z-10 text-center px-16">
-                         <h2 className="text-[3.5rem] leading-tight font-serif italic font-medium drop-shadow-sm" style={{ color: '#1f2937' }}>"{currentGreetingText}"</h2>
+                         <h2 className="text-[3rem] leading-tight font-serif italic font-semibold drop-shadow-md" style={{ color: '#1f2937' }}>"{currentGreetingText}"</h2>
                       </div>
                     </div>
-                    <p className="text-[2.5rem] leading-relaxed font-sans text-center px-8" style={{ color: '#1f2937' }}>
-                      {currentMessageText || t('no_message_today')}
-                    </p>
-                    <div className="absolute bottom-16 right-16 text-[2.5rem] font-sans italic transform -rotate-12 opacity-80 decoration-wavy" style={{ color: '#ec4899' }}>
-                      A beautiful memory
+                    <div className="px-10 py-4 min-h-[200px] flex items-center justify-center">
+                      <p className="text-[2.25rem] leading-relaxed font-sans text-center italic" style={{ color: '#374151' }}>
+                        {currentMessageText || t('no_message_today')}
+                      </p>
+                    </div>
+                    <div className="absolute bottom-12 right-12 text-[2rem] font-display italic transform -rotate-6 opacity-60 tracking-wider" style={{ color: '#ec4899' }}>
+                      Love Always
                     </div>
                   </div>
                   <div className="mt-24 px-12 py-6 rounded-full shadow-lg border flex items-center gap-4" style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: '#fce7f3' }}>

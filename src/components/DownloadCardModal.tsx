@@ -88,9 +88,18 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                     else if (val.includes('0.9')) val = '#ffffff';
                     else val = '#ec4899';
                   }
+
+                  // FIX: Kunci line-height agar tidak tumpang tindih
+                  if (prop === 'line-height' && (val === 'normal' || val === '0px' || !val)) {
+                    val = '1.4'; 
+                  }
                   
                   if (val) targetEl.style.setProperty(prop, val, 'important');
                 }
+                
+                // Tambahan: Force rendering teks agar tajam dan tidak bertumpuk
+                targetEl.style.webkitFontSmoothing = 'antialiased';
+                targetEl.style.textRendering = 'optimizeLegibility';
                 
                 // Rekursif untuk semua anak
                 for (let i = 0; i < sourceEl.children.length; i++) {
@@ -245,8 +254,10 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                       </p>
                     </div>
                     <div className="mt-14 w-48 h-1.5 bg-gradient-to-r from-transparent via-[#f472b6] to-transparent rounded-full" />
-                    <p className="mt-10 text-[1.75rem] font-bold tracking-[0.4em] uppercase opacity-50" style={{ color: '#be185d' }}>Triana's Daily Love</p>
-                    <p className="mt-2 text-xl font-semibold italic" style={{ color: '#db2777' }}>{format(new Date(), 'd MMMM yyyy', {locale: currentLocale})}</p>
+                    <div className="mt-10 flex flex-col items-center">
+                      <p className="text-[28px] font-bold tracking-[0.4em] uppercase opacity-50 block leading-normal" style={{ color: '#be185d' }}>Triana's Daily Love</p>
+                      <p className="text-[20px] font-semibold italic block mt-2 leading-relaxed" style={{ color: '#db2777' }}>{format(new Date(), 'd MMMM yyyy', {locale: currentLocale})}</p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -274,10 +285,12 @@ export default function DownloadCardModal({ isOpen, onClose, message, greeting, 
                       Love Always
                     </div>
                   </div>
-                  <div className="mt-24 px-12 py-6 rounded-full shadow-lg border flex items-center gap-4" style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: '#fce7f3' }}>
-                    <Heart className="w-8 h-8 pointer-events-none" style={{ color: '#f472b6', fill: '#f472b6' }} />
-                    <p className="text-3xl font-bold tracking-[0.2em] uppercase" style={{ color: '#f472b6' }}>Triana's Daily Love • {format(new Date(), 'dd/MM/yyyy')}</p>
-                    <Heart className="w-8 h-8 pointer-events-none" style={{ color: '#f472b6', fill: '#f472b6' }} />
+                  <div className="mt-20 px-16 py-8 rounded-full border-4 shadow-xl text-center flex items-center justify-center gap-6" style={{ backgroundColor: '#ffffff', borderColor: '#fce7f3' }}>
+                    <Heart className="w-10 h-10" style={{ color: '#f472b6', fill: '#f472b6' }} />
+                    <span className="text-[32px] font-bold tracking-[0.1em] uppercase whitespace-nowrap leading-none" style={{ color: '#f472b6' }}>
+                      Triana's Daily Love • {format(new Date(), 'dd/MM/yyyy')}
+                    </span>
+                    <Heart className="w-10 h-10" style={{ color: '#f472b6', fill: '#f472b6' }} />
                   </div>
                 </div>
               )}

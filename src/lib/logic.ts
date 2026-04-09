@@ -180,13 +180,12 @@ export function getTimeBasedGreetingKey() {
   return 'night';
 }
 
-export async function getUserDiaryArchive(deviceId: string) {
+export async function getUserDiaryArchive() {
   try {
     const supabase = getSupabase();
     const { data, error } = await supabase
       .from('user_messages')
       .select('*')
-      .eq('device_id', deviceId)
       .order('created_at', { ascending: false });
     
     if (error) throw error;

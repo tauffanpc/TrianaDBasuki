@@ -28,13 +28,7 @@ export default function DiaryHistory() {
   useEffect(() => {
     async function fetchHistory() {
       try {
-        let deviceId = localStorage.getItem('device_id');
-        if (!deviceId) {
-          deviceId = Math.random().toString(36).substring(7);
-          localStorage.setItem('device_id', deviceId);
-        }
-
-        const archive = await getUserDiaryArchive(deviceId);
+        const archive = await getUserDiaryArchive();
         setDiaryHistory(archive);
       } catch (error) {
         console.error(error);
@@ -135,17 +129,6 @@ export default function DiaryHistory() {
               </motion.div>
             ))
           )}
-        </div>
-
-        {/* Sync / Debug Info */}
-        <div className="mt-8 pt-8 border-t border-white/10 text-center">
-          <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] mb-1">Device ID Sync</p>
-          <code className="text-[10px] text-white/20 bg-black/10 px-2 py-1 rounded">
-            {localStorage.getItem('device_id') || 'No ID Found'}
-          </code>
-          <p className="text-[9px] text-white/20 mt-2 max-w-[200px] mx-auto italic">
-            Catatan diary terikat pada browser ini. Jika ganti browser/perangkat, ID akan berbeda.
-          </p>
         </div>
       </div>
     </Layout>
